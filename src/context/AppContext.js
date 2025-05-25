@@ -1,102 +1,145 @@
 import React, { createContext, useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  servicesData,
-  filterServices
-} from '../utils/servicesMockData';
-import {
-  quotesData,
-  filterQuotes
-} from '../utils/quotesMockData';
-import {
-  technicianData
-} from '../utils/mockData';
-import {
-  calendarEvents,
-  filterCalendarEvents
-} from '../utils/calendarMockData';
+// 1. IMPORTAMOS useAuth para obtener el token
+import { useAuth } from '../hooks/useAuth';
 
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  // --- ESTADOS ---
-  const [services, setServices] = useState(servicesData);
-  const [serviceFilters, setServiceFilters] = useState({
-    status: 'todos', type: 'todos', technician: 'todos',
-    client: 'todos', startDate: '', endDate: '',
-  });
-  const [filteredServices, setFilteredServices] = useState(servicesData);
+  // 2. OBTENEMOS EL USUARIO Y SU TOKEN
+  const { user } = useAuth();
 
-  const [quotes, setQuotes] = useState(quotesData);
-  const [quoteFilters, setQuoteFilters] = useState({
-    status: 'todos', client: 'todos', type: 'todos',
-    startDate: '', endDate: '',
-  });
-  const [filteredQuotes, setFilteredQuotes] = useState(quotesData);
+  // 3. ESTADOS PARA CLIENTES
+  const [clients, setClients] = useState([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [errorClients, setErrorClients] = useState(null);
 
-  const [technicians, setTechnicians] = useState(technicianData);
-
-  const [events, setEvents] = useState(calendarEvents);
-  const [calendarFilters, setCalendarFilters] = useState({
-    types: ['programado', 'correctivo'],
-    technician: 'todos',
-  });
-  const [filteredEvents, setFilteredEvents] = useState(calendarEvents);
-
-  // --- EFECTOS ---
+  // 4. EFECTO PARA CARGAR CLIENTES DESDE LA API
   useEffect(() => {
-    setFilteredServices(filterServices(services, serviceFilters));
-  }, [services, serviceFilters]);
+    if (user?.token) {
+      const fetchClients = async () => {
+        setIsLoadingClients(true);
+        setErrorClients(null);
+        try {
+          const response = await fetch('http://localhost:3001/api/clients', {
+            headers: {
+              'Authorization': `Bearer ${user.token}`
+            }
+          });
+          if (!response.ok) {
+            throw new Error('No se pudo obtener la lista de clientes.');
+          }
+          const responseData = await response.json();
+          // Corrección para asegurar que siempre trabajemos con un array
+          const clientsArray = Array.isArray(responseData.data) ? responseData.data : [];
+          setClients(clientsArray);
+        } catch (err) {
+          setErrorClients(err.message);
+        } finally {
+          setIsLoadingClients(false);
+        }
+      };
+      fetchClients();
+    }
+  }, [user]);
 
-  useEffect(() => {
-    setFilteredQuotes(filterQuotes(quotes, quoteFilters));
-  }, [quotes, quoteFilters]);
 
-  useEffect(() => {
-    setFilteredEvents(filterCalendarEvents(events, calendarFilters));
-  }, [events, calendarFilters]);
+  // 5. FUNCIONES CRUD PARA CLIENTES
+  
+  // *** LA MODIFICACIÓN CLAVE ESTÁ AQUÍ ***
+  const addClient = useCallback(async (clientData) => {
+  if (!user?.token) return;
+  try {
+    // --- AÑADE ESTA LÍNEA AQUÍ ---
+    console.log(">>>>> DATOS ENVIADOS AL BACKEND:", JSON.stringify(clientData, null, 2));
+    // ----------------------------
 
-  // --- FUNCIONES MEMORIZADAS CON useCallback ---
-  const addService = useCallback((newService) => setServices(prev => [newService, ...prev]), []);
-  const updateService = useCallback((id, updatedService) => {
-    setServices(prev => prev.map(s => s.id === id ? { ...s, ...updatedService } : s));
-  }, []);
-  const deleteService = useCallback((id) => setServices(prev => prev.filter(s => s.id !== id)), []);
+    const response = await fetch('http://localhost:3001/api/clients', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.token}`
+      },
+      body: JSON.stringify(clientData)
+    });
 
-  const addQuote = useCallback((newQuote) => setQuotes(prev => [newQuote, ...prev]), []);
-  const updateQuote = useCallback((id, updatedQuote) => {
-    setQuotes(prev => prev.map(q => q.id === id ? { ...q, ...updatedQuote } : q));
-  }, []);
-  const deleteQuote = useCallback((id) => setQuotes(prev => prev.filter(q => q.id !== id)), []);
+      // --- MANEJO DE ERRORES MEJORADO ---
+      // Si la respuesta es un error (como el 400 Bad Request)...
+      if (!response.ok) {
+        // ...leemos el cuerpo del error para obtener los detalles que envía el backend.
+        const errorData = await response.json();
+        
+        // Formateamos los errores para que sean fáciles de leer.
+        // Esto busca el array `errors` que tu middleware de validación envía.
+        const errorMessages = errorData.errors
+          ? errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n')
+          : 'El servidor no especificó el error.';
 
-  const addTechnician = useCallback((newTechnician) => setTechnicians(prev => [...prev, newTechnician]), []);
-  const updateTechnician = useCallback((id, updatedTechnician) => {
-    setTechnicians(prev => prev.map(t => t.id === id ? { ...t, ...updatedTechnician } : t));
-  }, []);
-  const deleteTechnician = useCallback((id) => setTechnicians(prev => prev.filter(t => t.id !== id)), []);
+        // Lanzamos un nuevo error mucho más específico y detallado.
+        throw new Error(`Datos inválidos. El servidor requiere:\n${errorMessages}`);
+      }
+      
+      const newClient = await response.json();
+      setClients(prev => [newClient, ...prev]);
+      return newClient;
 
-  const addEvent = useCallback((newEvent) => setEvents(prev => [...prev, newEvent]), []);
-  const updateEvent = useCallback((id, updatedEvent) => {
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updatedEvent } : e));
-  }, []);
-  const deleteEvent = useCallback((id) => setEvents(prev => prev.filter(e => e.id !== id)), []);
+    } catch (error) {
+      // Este catch ahora recibirá el error detallado que creamos arriba.
+      console.error("Error detallado en addClient:", error.message);
+      throw error;
+    }
+  }, [user]);
 
-  // --- VALOR DEL CONTEXTO MEMORIZADO CON useMemo ---
+  // Las funciones de update y delete se quedan igual por ahora
+  const updateClient = useCallback(async (clientId, clientData) => {
+    // (Lógica de update...)
+    if (!user?.token) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(clientData)
+      });
+      if (!response.ok) throw new Error('Error al actualizar el cliente.');
+      const updatedClient = await response.json();
+      setClients(prev => prev.map(c => (c.id === clientId ? updatedClient : c)));
+      return updatedClient;
+    } catch (error) {
+      console.error("Error en updateClient:", error);
+      throw error;
+    }
+  }, [user]);
+
+  const deleteClient = useCallback(async (clientId) => {
+    // (Lógica de delete...)
+    if (!user?.token) return;
+    try {
+      await fetch(`http://localhost:3001/api/clients/${clientId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      setClients(prev => prev.filter(c => c.id !== clientId));
+    } catch (error) {
+      console.error("Error en deleteClient:", error);
+      throw error;
+    }
+  }, [user]);
+
+
+  // 6. VALOR DEL CONTEXTO
   const contextValue = useMemo(() => ({
-    services, filteredServices, serviceFilters, setServiceFilters,
-    addService, updateService, deleteService,
-    quotes, filteredQuotes, quoteFilters, setQuoteFilters,
-    addQuote, updateQuote, deleteQuote,
-    technicians, addTechnician, updateTechnician, deleteTechnician,
-    events, filteredEvents, calendarFilters, setCalendarFilters,
-    addEvent, updateEvent, deleteEvent
+    clients,
+    isLoadingClients,
+    errorClients,
+    addClient,
+    updateClient,
+    deleteClient,
   }), [
-    services, filteredServices, serviceFilters,
-    addService, updateService, deleteService,
-    quotes, filteredQuotes, quoteFilters,
-    addQuote, updateQuote, deleteQuote,
-    technicians, addTechnician, updateTechnician, deleteTechnician,
-    events, filteredEvents, calendarFilters,
-    addEvent, updateEvent, deleteEvent
+    clients, isLoadingClients, errorClients, addClient, updateClient, deleteClient
   ]);
 
   return (

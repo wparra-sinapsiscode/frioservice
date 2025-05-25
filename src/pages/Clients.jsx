@@ -1,93 +1,173 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useContext } from 'react';
 import { FaPlus, FaSearch, FaEdit, FaTrash, FaEye } from 'react-icons/fa';
-import { clientData } from '../utils/mockData';
+import { AppContext } from '../context/AppContext';
+import { useAuth } from '../hooks/useAuth'; // 1. AÑADIMOS LA IMPORTACIÓN DE useAuth
 
 const Clients = () => {
+  const { 
+    clients, 
+    isLoadingClients, 
+    errorClients, 
+    addClient, 
+    updateClient, 
+    deleteClient 
+  } = useContext(AppContext);
+  
+  // 2. OBTENEMOS EL USUARIO LOGUEADO (EL ADMIN) DEL AuthContext
+  const { user } = useAuth(); 
+
+  // --- ESTADOS LOCALES PARA LA UI (SIN CAMBIOS) ---
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
   const [typeFilter, setTypeFilter] = useState('todos');
   const [showModal, setShowModal] = useState(false);
-  const [clientType, setClientType] = useState('empresa');
-  const [clients, setClients] = useState(clientData);
+  const [clientType, setClientType] = useState('empresa'); // El estado local para el tipo de cliente del formulario
   const [editingClient, setEditingClient] = useState(null);
   const [viewingClient, setViewingClient] = useState(null);
 
-  // Modal para nuevo cliente
+  // --- MANEJADORES DE EVENTOS (SIN CAMBIOS) ---
   const handleNewClient = () => {
     setEditingClient(null);
     setShowModal(true);
   };
 
-  // Cerrar modal
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingClient(null);
   };
 
-  // Ver detalles de cliente
   const handleViewClient = (client) => {
     setViewingClient(client);
   };
 
-  // Editar cliente
   const handleEditClient = (client) => {
     setEditingClient(client);
-    setClientType(client.type);
+    // Asegúrate que 'client.clientType' sea la propiedad correcta si viene del backend
+    setClientType(client.clientType || client.type || 'empresa'); 
     setShowModal(true);
   };
 
-  // Eliminar cliente
-  const handleDeleteClient = (client) => {
-    if (window.confirm(`¿Está seguro de eliminar el cliente ${client.name}?`)) {
-      setClients(clients.filter(c => c.id !== client.id));
-    }
+  // --- FUNCIÓN DE GUARDADO CORREGIDA ---
+// En Clients.jsx
+
+const handleSaveClient = async (e) => {
+  e.preventDefault();
+
+  if (!user || !user.id) {
+    alert("Error de sesión: No se pudo obtener el ID del usuario. Por favor, inicie sesión de nuevo.");
+    console.error("Intento de guardar cliente sin user.id:", user);
+    return;
+  }
+
+  const formData = new FormData(e.target);
+  
+  let backendApiCompatibleClientType;
+  if (clientType === 'empresa') {
+    backendApiCompatibleClientType = 'COMPANY';
+  } else if (clientType === 'personal') {
+    backendApiCompatibleClientType = 'PERSONAL';
+  } else {
+    alert("Tipo de cliente no reconocido. Por favor, seleccione uno válido.");
+    return;
+  }
+
+  // Objeto base con campos comunes
+  const clientDataFromForm = {
+    clientType: backendApiCompatibleClientType,
+    userId: user.id,        
+    email: formData.get('email'),
+    phone: formData.get('phone'),
+    address: formData.get('address'),
+    city: formData.get('city'),
+    district: formData.get('district'),
+    username: formData.get('username'),
+    password: formData.get('password'),
   };
+  
+  // Si la contraseña está vacía y no estamos editando, la eliminamos o validamos
+  if (!editingClient && !clientDataFromForm.password) {
+      alert("La contraseña es requerida para nuevos clientes.");
+      return;
+  }
+  if (editingClient && !clientDataFromForm.password) {
+      delete clientDataFromForm.password; 
+  }
 
-  // Guardar cliente (simulado)
-  const handleSaveClient = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const clientData = {
-      name: formData.get('name'),
-      contact: formData.get('contact'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      city: formData.get('city'),
-      type: clientType,
-      status: 'activo',
-      services: editingClient ? editingClient.services : 0,
-      nextService: editingClient ? editingClient.nextService : 'No programado'
-    };
-
+  // --- ¡AQUÍ ESTÁ EL CAMBIO CLAVE PARA LOS NOMBRES! ---
+  if (clientType === 'empresa') {
+    // Asumimos que el backend espera 'companyName' para el nombre de la empresa.
+    // 'name' es el atributo del input de "Razón Social" en tu formulario.
+    clientDataFromForm.companyName = formData.get('name'); 
+    clientDataFromForm.ruc = formData.get('ruc');
+    clientDataFromForm.sector = formData.get('sector');
+  } else { // personal
+    // Asumimos que el backend espera 'firstName' y 'lastName' para personas.
+    // 'name' es el atributo del input de "Nombres" en tu formulario.
+    clientDataFromForm.firstName = formData.get('name'); 
+    clientDataFromForm.lastName = formData.get('lastname');
+    clientDataFromForm.dni = formData.get('dni');
+  }
+  
+  try {
     if (editingClient) {
-      setClients(clients.map(client => 
-        client.id === editingClient.id ? { ...clientData, id: editingClient.id } : client
-      ));
+      // Ajusta esto si el update también necesita companyName/firstName/lastName
+      await updateClient(editingClient.id, clientDataFromForm);
     } else {
-      const newId = Math.max(...clients.map(c => c.id)) + 1;
-      setClients([{ ...clientData, id: newId }, ...clients]);
+      await addClient(clientDataFromForm);
     }
-
-    setShowModal(false);
-    setEditingClient(null);
+    handleCloseModal();
+  } catch (error) {
+    console.error("Falló al guardar el cliente:", error);
+    alert(error.message); 
+  }
+};
+  
+  const handleDeleteClient = async (client) => {
+    if (window.confirm(`¿Está seguro de eliminar el cliente ${client.name}?`)) {
+      try {
+        await deleteClient(client.id);
+      } catch (error) {
+        console.error("Falló al eliminar el cliente:", error);
+        alert(error.message || "Error al eliminar cliente.");
+      }
+    }
   };
 
-  // Cambiar tipo de cliente en el formulario
   const handleClientTypeChange = (e) => {
     setClientType(e.target.value);
   };
 
-  // Filtrar clientes usando useMemo para optimizar rendimiento
   const filteredClients = useMemo(() => {
+    // Agregamos una comprobación para asegurarnos que 'clients' sea un array antes de filtrar
+    if (!Array.isArray(clients)) {
+      return [];
+    }
     return clients.filter(client => {
-      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           client.contact.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           client.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'todos' || client.status.toLowerCase() === statusFilter.toLowerCase();
-      const matchesType = typeFilter === 'todos' || client.type.toLowerCase() === typeFilter.toLowerCase();
+      // Adaptamos las propiedades a las que vienen del backend (ej: client.user.username)
+      const clientName = client.name || client.user?.username || '';
+      const clientEmail = client.email || client.user?.email || '';
+      const clientContact = client.contactPerson || ''; // Ajusta según tu modelo de datos
+
+      const matchesSearch = clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           clientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           clientContact.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'todos' || (client.status && client.status.toLowerCase() === statusFilter.toLowerCase());
+      
+      // Usamos client.clientType porque así lo espera el backend y así lo guardaremos
+      const matchesType = typeFilter === 'todos' || (client.clientType && client.clientType.toLowerCase() === typeFilter.toLowerCase());
+      
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [clients, searchTerm, statusFilter, typeFilter]);
+  
+  if (isLoadingClients) {
+    return <div className="text-center p-8">Cargando clientes...</div>;
+  }
+
+  if (errorClients) {
+    return <div className="text-center p-8 text-red-600">Error al cargar clientes: {errorClients}</div>;
+  }
 
   return (
     <div>
@@ -105,7 +185,6 @@ const Clients = () => {
         </div>
       </div>
       
-      {/* Filtros */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
         <div className="flex-grow">
           <div className="relative">
@@ -137,8 +216,8 @@ const Clients = () => {
           <label>Tipo:</label>
           <select 
             className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            value={typeFilter} // Este es el estado local para el filtro de la tabla
+            onChange={(e) => setTypeFilter(e.target.value)} // Actualiza el filtro de la tabla
           >
             <option value="todos">Todos</option>
             <option value="empresa">Empresa</option>
@@ -147,7 +226,6 @@ const Clients = () => {
         </div>
       </div>
       
-      {/* Tabla de clientes */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -159,7 +237,7 @@ const Clients = () => {
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Email</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Teléfono</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Dirección</th>
-                <th className="px-4 py-3 text-sm font-medium text-gray-600">Servicios</th>
+                {/* <th className="px-4 py-3 text-sm font-medium text-gray-600">Servicios</th> */}
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Estado</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Acciones</th>
               </tr>
@@ -167,19 +245,19 @@ const Clients = () => {
             <tbody>
               {filteredClients.map((client) => (
                 <tr key={client.id} className="border-t border-gray-200 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm">#{client.id}</td>
+                  <td className="px-4 py-3 text-sm">#{client.id?.substring(0, 6) || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="font-medium">{client.name}</div>
-                    <div className="text-gray-500 text-xs">{client.contact}</div>
+                    <div className="font-medium">{client.name || client.user?.username}</div>
+                    <div className="text-gray-500 text-xs">{client.contactPerson || client.ruc || client.dni}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm capitalize">{client.type}</td>
-                  <td className="px-4 py-3 text-sm">{client.email}</td>
+                  <td className="px-4 py-3 text-sm capitalize">{client.clientType}</td>
+                  <td className="px-4 py-3 text-sm">{client.email || client.user?.email}</td>
                   <td className="px-4 py-3 text-sm">{client.phone}</td>
-                  <td className="px-4 py-3 text-sm">{client.city}</td>
-                  <td className="px-4 py-3 text-sm">{client.services}</td>
+                  <td className="px-4 py-3 text-sm">{client.address}</td>
+                  {/* <td className="px-4 py-3 text-sm">{client.totalServices || client._count?.services}</td> */}
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 text-xs rounded-full capitalize ${
-                      client.status === 'activo' 
+                      client.status?.toLowerCase() === 'active' || client.status?.toLowerCase() === 'activo'
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
@@ -217,36 +295,18 @@ const Clients = () => {
           </table>
         </div>
         
-        {/* Paginación */}
         <div className="flex justify-between items-center px-4 py-3 border-t border-gray-200">
           <div className="text-sm text-gray-500">
-            Mostrando {filteredClients.length} clientes
+            Mostrando {filteredClients.length} de {clients.length} clientes
           </div>
-          <div className="flex gap-1">
-            <button className="px-3 py-1 rounded border border-gray-300 text-sm disabled:opacity-50">
-              &laquo;
-            </button>
-            <button className="px-3 py-1 rounded border border-primary bg-primary text-white text-sm">
-              1
-            </button>
-            <button className="px-3 py-1 rounded border border-gray-300 text-sm">
-              2
-            </button>
-            <button className="px-3 py-1 rounded border border-gray-300 text-sm">
-              3
-            </button>
-            <button className="px-3 py-1 rounded border border-gray-300 text-sm">
-              &raquo;
-            </button>
-          </div>
+          {/* Aquí podrías implementar una paginación real más adelante */}
         </div>
       </div>
       
-      {/* Modal de Nuevo Cliente */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl">
-            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4 sticky top-0 bg-white z-10">
               <h3 className="text-xl font-semibold">{editingClient ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
               <button onClick={handleCloseModal} className="text-gray-500 hover:text-gray-700">
                 <span className="text-2xl">&times;</span>
@@ -256,29 +316,29 @@ const Clients = () => {
             <div className="p-6">
               <form onSubmit={handleSaveClient}>
                 <div className="mb-4">
-                  <label className="block mb-2">Tipo de Cliente:</label>
+                  <label className="block mb-2 text-sm font-medium text-gray-700">Tipo de Cliente:</label>
                   <div className="flex gap-4">
                     <label className="inline-flex items-center">
                       <input
                         type="radio"
-                        name="cliente-tipo"
+                        name="clientTypeSelector" // Nombre diferente para no chocar con el estado
                         value="empresa"
                         checked={clientType === 'empresa'}
                         onChange={handleClientTypeChange}
-                        className="form-radio h-4 w-4 text-primary"
+                        className="form-radio h-4 w-4 text-primary focus:ring-primary"
                       />
-                      <span className="ml-2">Empresa</span>
+                      <span className="ml-2 text-sm">Empresa</span>
                     </label>
                     <label className="inline-flex items-center">
                       <input
                         type="radio"
-                        name="cliente-tipo"
+                        name="clientTypeSelector"
                         value="personal"
                         checked={clientType === 'personal'}
                         onChange={handleClientTypeChange}
-                        className="form-radio h-4 w-4 text-primary"
+                        className="form-radio h-4 w-4 text-primary focus:ring-primary"
                       />
-                      <span className="ml-2">Personal</span>
+                      <span className="ml-2 text-sm">Personal</span>
                     </label>
                   </div>
                 </div>
@@ -286,29 +346,35 @@ const Clients = () => {
                 {clientType === 'empresa' ? (
                   <>
                     <div className="mb-4">
-                      <label className="block mb-2">Razón Social:</label>
+                      <label className="block mb-2 text-sm font-medium">Razón Social:</label>
                       <input
                         type="text"
                         name="name"
                         defaultValue={editingClient?.name || ''}
-                        className="w-full p-2 border border-gray-300 rounded-md"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                         required
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block mb-2">RUC:</label>
+                        <label className="block mb-2 text-sm font-medium">RUC:</label>
                         <input
                           type="text"
                           name="ruc"
                           defaultValue={editingClient?.ruc || ''}
-                          className="w-full p-2 border border-gray-300 rounded-md"
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                           required
+                          minLength="11"
+                          maxLength="11"
                         />
                       </div>
                       <div>
-                        <label className="block mb-2">Sector:</label>
-                        <select className="w-full p-2 border border-gray-300 rounded-md">
+                        <label className="block mb-2 text-sm font-medium">Sector:</label>
+                        <select 
+                          name="sector" 
+                          defaultValue={editingClient?.sector || ''}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                        >
                           <option value="">Seleccione un sector</option>
                           <option value="alimentacion">Alimentación</option>
                           <option value="restaurante">Restaurante</option>
@@ -320,35 +386,38 @@ const Clients = () => {
                       </div>
                     </div>
                   </>
-                ) : (
+                ) : ( // Personal
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block mb-2">Nombres:</label>
+                        <label className="block mb-2 text-sm font-medium">Nombres:</label>
                         <input
                           type="text"
-                          name="name"
+                          name="name" // El backend espera 'name' para el nombre de persona también
                           defaultValue={editingClient?.name || ''}
-                          className="w-full p-2 border border-gray-300 rounded-md"
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                          required
                         />
                       </div>
                       <div>
-                        <label className="block mb-2">Apellidos:</label>
+                        <label className="block mb-2 text-sm font-medium">Apellidos:</label>
                         <input
                           type="text"
                           name="lastname"
                           defaultValue={editingClient?.lastname || ''}
-                          className="w-full p-2 border border-gray-300 rounded-md"
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                         />
                       </div>
                     </div>
                     <div className="mb-4">
-                      <label className="block mb-2">DNI:</label>
+                      <label className="block mb-2 text-sm font-medium">DNI:</label>
                       <input
                         type="text"
                         name="dni"
                         defaultValue={editingClient?.dni || ''}
-                        className="w-full p-2 border border-gray-300 rounded-md"
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                        minLength="8"
+                        maxLength="8"
                       />
                     </div>
                   </>
@@ -356,80 +425,82 @@ const Clients = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block mb-2">Email:</label>
+                    <label className="block mb-2 text-sm font-medium">Email (para login y contacto):</label>
                     <input
                       type="email"
                       name="email"
-                      defaultValue={editingClient?.email || ''}
-                      className="w-full p-2 border border-gray-300 rounded-md"
+                      defaultValue={editingClient?.email || editingClient?.user?.email || ''}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block mb-2">Teléfono:</label>
+                    <label className="block mb-2 text-sm font-medium">Teléfono:</label>
                     <input
                       type="text"
                       name="phone"
                       defaultValue={editingClient?.phone || ''}
-                      className="w-full p-2 border border-gray-300 rounded-md"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                       required
                     />
                   </div>
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block mb-2">Dirección:</label>
+                  <label className="block mb-2 text-sm font-medium">Dirección:</label>
                   <input
                     type="text"
                     name="address"
                     defaultValue={editingClient?.address || ''}
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                     required
                   />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block mb-2">Ciudad:</label>
+                    <label className="block mb-2 text-sm font-medium">Ciudad:</label>
                     <input
                       type="text"
                       name="city"
                       defaultValue={editingClient?.city || ''}
-                      className="w-full p-2 border border-gray-300 rounded-md"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block mb-2">Distrito:</label>
+                    <label className="block mb-2 text-sm font-medium">Distrito:</label>
                     <input
                       type="text"
                       name="district"
                       defaultValue={editingClient?.district || ''}
-                      className="w-full p-2 border border-gray-300 rounded-md"
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                       required
                     />
                   </div>
                 </div>
                 
+                <h4 className="text-md font-semibold mt-6 mb-2">Datos de Acceso para el Cliente</h4>
                 <div className="mb-4">
-                  <label className="block mb-2">Usuario:</label>
+                  <label className="block mb-2 text-sm font-medium">Nombre de Usuario (para login):</label>
                   <input
                     type="text"
                     name="username"
-                    defaultValue={editingClient?.username || ''}
-                    className="w-full p-2 border border-gray-300 rounded-md"
+                    defaultValue={editingClient?.user?.username || ''}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                     required
                   />
                 </div>
                 
                 <div className="mb-4">
-                  <label className="block mb-2">Contraseña:</label>
+                  <label className="block mb-2 text-sm font-medium">Contraseña (para login):</label>
                   <input
                     type="password"
                     name="password"
-                    placeholder={editingClient ? 'Dejar en blanco para mantener la actual' : ''}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                    required={!editingClient}
+                    placeholder={editingClient ? 'Dejar en blanco para no cambiar' : 'Mínimo 6 caracteres'}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+                    required={!editingClient} // Requerida solo si es nuevo cliente
+                    minLength={!editingClient ? 6 : undefined}
                   />
                 </div>
                 
@@ -445,7 +516,7 @@ const Clients = () => {
                     type="submit"
                     className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
                   >
-                    {editingClient ? 'Actualizar' : 'Guardar'}
+                    {editingClient ? 'Actualizar Cliente' : 'Guardar Cliente'}
                   </button>
                 </div>
               </form>
@@ -454,11 +525,10 @@ const Clients = () => {
         </div>
       )}
 
-      {/* Modal para ver detalles */}
       {viewingClient && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+            <div className="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white z-10">
               <h3 className="text-xl font-semibold">Detalles de Cliente</h3>
               <button 
                 onClick={() => setViewingClient(null)} 
@@ -468,25 +538,34 @@ const Clients = () => {
               </button>
             </div>
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>ID:</strong> #{viewingClient.id}</div>
-                <div><strong>Nombre:</strong> {viewingClient.name}</div>
-                <div><strong>Tipo:</strong> <span className="capitalize">{viewingClient.type}</span></div>
-                <div><strong>Email:</strong> {viewingClient.email}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div><strong>ID Cliente:</strong> #{viewingClient.id?.substring(0,8)}</div>
+                <div><strong>ID Usuario:</strong> #{viewingClient.userId?.substring(0,8)}</div>
+                <hr className="md:col-span-2 my-2"/>
+                <div><strong>Nombre/Razón Social:</strong> {viewingClient.name}</div>
+                {viewingClient.clientType === 'EMPRESA' && viewingClient.ruc && <div><strong>RUC:</strong> {viewingClient.ruc}</div>}
+                {viewingClient.clientType === 'PERSONAL' && viewingClient.dni && <div><strong>DNI:</strong> {viewingClient.dni}</div>}
+                {viewingClient.clientType === 'PERSONAL' && viewingClient.lastname && <div><strong>Apellidos:</strong> {viewingClient.lastname}</div>}
+                <div><strong>Tipo:</strong> <span className="capitalize">{viewingClient.clientType?.toLowerCase()}</span></div>
+                <div><strong>Email:</strong> {viewingClient.email || viewingClient.user?.email}</div>
                 <div><strong>Teléfono:</strong> {viewingClient.phone}</div>
+                <div><strong>Dirección:</strong> {viewingClient.address}</div>
                 <div><strong>Ciudad:</strong> {viewingClient.city}</div>
-                <div><strong>Contacto:</strong> {viewingClient.contact}</div>
-                <div><strong>Servicios:</strong> {viewingClient.services}</div>
+                <div><strong>Distrito:</strong> {viewingClient.district}</div>
+                <div><strong>Sector:</strong> {viewingClient.sector}</div>
+                <hr className="md:col-span-2 my-2"/>
+                <div><strong>Usuario (login):</strong> {viewingClient.user?.username}</div>
                 <div><strong>Estado:</strong> 
                   <span className={`ml-2 px-2 py-1 text-xs rounded-full capitalize ${
-                    viewingClient.status === 'activo' 
+                    viewingClient.status?.toLowerCase() === 'active' || viewingClient.status?.toLowerCase() === 'activo'
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-red-100 text-red-800'
                   }`}>
-                    {viewingClient.status}
+                    {viewingClient.status?.toLowerCase()}
                   </span>
                 </div>
-                <div><strong>Próximo Servicio:</strong> {viewingClient.nextService}</div>
+                <div><strong>Total Servicios:</strong> {viewingClient.totalServices || client._count?.services || 0}</div>
+                {/* <div><strong>Próximo Servicio:</strong> {viewingClient.nextServiceDate ? new Date(viewingClient.nextServiceDate).toLocaleDateString() : 'No programado'}</div> */}
               </div>
               <div className="flex justify-end mt-6">
                 <button 
