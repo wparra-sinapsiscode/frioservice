@@ -13,36 +13,21 @@ import {
   FaHistory,
   FaBell,
   FaSnowflake,
-  FaSignOutAlt,
-  FaHome,
-  FaCog,
-  FaUser
+  FaSignOutAlt
 } from 'react-icons/fa';
-import {
-  HiOutlineChartBarSquare,
-  HiOutlineDocumentDuplicate,
-  HiOutlineWrenchScrewdriver,
-  HiOutlineUsers,
-  HiOutlineUserGroup,
-  HiOutlineChartPie,
-  HiOutlineClipboardDocumentList,
-  HiOutlineMagnifyingGlass,
-  HiOutlineClock,
-  HiOutlineBell,
-  HiOutlineCommandLine
-} from 'react-icons/hi2';
 
-const Sidebar = ({ collapsed, onToggle }) => {
+const Sidebar = ({ collapsed }) => {
   const { user, logout } = useAuth();
 
-  // Determinar el tipo de menú según el usuario
+  // Determinar el tipo de menú según el rol del usuario
   const getMenuItems = () => {
-    switch (user?.userType) {
+    // CORRECCIÓN: Se comprueba "user.role" en lugar de "user.userType"
+    switch (user?.role?.toLowerCase()) {
       case 'admin':
         return adminMenuItems;
-      case 'tecnico':
+      case 'technician':
         return technicianMenuItems;
-      case 'cliente':
+      case 'client':
         return clientMenuItems;
       default:
         return [];
@@ -84,28 +69,31 @@ const Sidebar = ({ collapsed, onToggle }) => {
   return (
     <nav className={`fixed top-0 left-0 h-screen bg-white shadow-md z-30 transition-all duration-300 overflow-y-auto ${collapsed ? 'w-[70px]' : 'w-[260px]'}`}>
       {/* Logo y Header */}
-      <div className="flex items-center p-5 bg-primary text-white h-[70px]">
-        <img
-          src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDc3Y2MiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjMgMTlhMiAyIDAgMCAxLTIgMkgzYTIgMiAwIDAgMS0yLTJWOGEyIDIgMCAwIDEgMi0yaDRsMi0zaDZsMiAzaDRhMiAyIDAgMCAxIDIgMnoiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEzIiByPSI0Ii8+PC9zdmc+"
-          alt="Logo"
-          className="w-9 h-9 rounded-full"
-        />
-        {!collapsed && <h2 className="ml-3 text-xl font-semibold whitespace-nowrap">FríoService</h2>}
+      <div className="flex items-center p-5 bg-gray-900 h-[70px]">
+        {/* Ícono blanco, se ve bien */}
+        <FaSnowflake className="w-8 h-8 text-white" />
+
+        {/* AÑADIMOS "text-white" aquí para que el texto sea blanco brillante */}
+        {!collapsed && (
+          <h2 className="ml-3 text-xl font-semibold whitespace-nowrap text-white">
+            FríoService
+          </h2>
+        )}
       </div>
 
       {/* Información del Usuario */}
       <div className="flex items-center p-4 border-b border-gray-light">
         <img
-          src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDc3Y2MiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCIgLz48L3N2Zz4="
+          src={`https://ui-avatars.com/api/?name=${user?.username || 'User'}&background=0D8ABC&color=fff&rounded=true`}
           alt="Usuario"
           className="w-10 h-10 rounded-full"
         />
         {!collapsed && (
           <div className="ml-3">
             <h3 className="text-sm font-semibold leading-tight">{user?.username}</h3>
-            <p className="text-xs text-gray">
-              {user?.userType === 'admin' ? 'Administrador' :
-                user?.userType === 'tecnico' ? 'Técnico' : 'Cliente'}
+            <p className="text-xs text-gray capitalize">
+              {/* CORRECCIÓN: Se muestra "user.role" */}
+              {user?.role}
             </p>
           </div>
         )}
