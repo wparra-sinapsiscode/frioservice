@@ -1,9 +1,10 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Layouts
-import MainLayout from './components/layout/MainLayout';
+// import MainLayout from './components/layout/MainLayout'; // No es necesario importarlo aquí si ProtectedRoute lo maneja
 
 // Pages
 import Login from './pages/Login';
@@ -26,6 +27,14 @@ import MyEquipment from './pages/MyEquipment';
 function App() {
   const { user, loading } = useAuth();
 
+  // Mapa para redirigir a los usuarios que ya están logueados
+  // Asegúrate de que las claves aquí (admin, tecnico, cliente) coincidan con los valores en minúsculas de user.role
+  const roleRedirects = {
+    admin: '/',
+    technician: '/tecnico', // <-- Cambia 'tecnico' por 'technician'
+    cliente: '/cliente'
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -36,37 +45,50 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-      
-      {/* Rutas protegidas para Administrador */}
-      <Route path="/" element={user && user.userType === 'admin' ? <MainLayout /> : <Navigate to="/login" />}>
+      {/* Ruta pública para Login: si el usuario ya existe, lo redirige a su dashboard */}
+      <Route
+        path="/login"
+        element={
+          !user ? (
+            <Login />
+          ) : (
+            // --- CAMBIO CLAVE AQUÍ ---
+            <Navigate to={roleRedirects[user.role?.toLowerCase()] || '/'} replace />
+          )
+        }
+      />
+
+      {/* --- RUTAS PROTEGIDAS Y CORRECTAMENTE ESTRUCTURADAS --- */}
+
+      {/* Rutas para Administrador */}
+      <Route path="/" element={<ProtectedRoute allowedRoles={['admin']} />}>
         <Route index element={<Dashboard />} />
-        <Route path="cotizaciones" element={<Quotes />} />
         <Route path="servicios" element={<Services />} />
         <Route path="calendario-servicios" element={<ServiceCalendar />} />
+        <Route path="cotizaciones" element={<Quotes />} />
         <Route path="tecnicos" element={<Technicians />} />
         <Route path="clientes" element={<Clients />} />
         <Route path="estadisticas" element={<Statistics />} />
       </Route>
-      
-      {/* Rutas protegidas para Técnico */}
-      <Route path="/tecnico" element={user && user.userType === 'tecnico' ? <MainLayout /> : <Navigate to="/login" />}>
+
+      {/* Rutas para Técnico */}
+      <Route path="/tecnico" element={<ProtectedRoute allowedRoles={['technician']} />}>
         <Route index element={<TechnicianDashboard />} />
         <Route path="mis-servicios" element={<MyServices />} />
         <Route path="mis-evaluaciones" element={<MyEvaluations />} />
         <Route path="historial-trabajos" element={<WorkHistory />} />
       </Route>
-      
-      {/* Rutas protegidas para Cliente */}
-      <Route path="/cliente" element={user && user.userType === 'cliente' ? <MainLayout /> : <Navigate to="/login" />}>
+
+      {/* Rutas para Cliente */}
+      <Route path="/cliente" element={<ProtectedRoute allowedRoles={['client']} />}>
         <Route index element={<ClientDashboard />} />
         <Route path="mis-cotizaciones" element={<MyQuotes />} />
         <Route path="solicitar-servicio" element={<RequestService />} />
         <Route path="mis-equipos" element={<MyEquipment />} />
       </Route>
-      
-      {/* Ruta para cualquier otra URL */}
-      <Route path="*" element={<Navigate to={user ? '/' : '/login'} />} />
+
+      {/* Ruta para cualquier otra URL no encontrada */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

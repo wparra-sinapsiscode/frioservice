@@ -1,50 +1,40 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { 
-  servicesData, 
-  filterServices 
+import React, { createContext, useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  servicesData,
+  filterServices
 } from '../utils/servicesMockData';
-import { 
-  quotesData, 
-  filterQuotes 
+import {
+  quotesData,
+  filterQuotes
 } from '../utils/quotesMockData';
-import { 
-  technicianData 
+import {
+  technicianData
 } from '../utils/mockData';
-import { 
-  calendarEvents, 
-  filterCalendarEvents 
+import {
+  calendarEvents,
+  filterCalendarEvents
 } from '../utils/calendarMockData';
 
 export const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
-  // Estado para servicios
+  // --- ESTADOS ---
   const [services, setServices] = useState(servicesData);
   const [serviceFilters, setServiceFilters] = useState({
-    status: 'todos',
-    type: 'todos',
-    technician: 'todos',
-    client: 'todos',
-    startDate: '',
-    endDate: '',
+    status: 'todos', type: 'todos', technician: 'todos',
+    client: 'todos', startDate: '', endDate: '',
   });
   const [filteredServices, setFilteredServices] = useState(servicesData);
 
-  // Estado para cotizaciones
   const [quotes, setQuotes] = useState(quotesData);
   const [quoteFilters, setQuoteFilters] = useState({
-    status: 'todos',
-    client: 'todos',
-    type: 'todos',
-    startDate: '',
-    endDate: '',
+    status: 'todos', client: 'todos', type: 'todos',
+    startDate: '', endDate: '',
   });
   const [filteredQuotes, setFilteredQuotes] = useState(quotesData);
 
-  // Estado para técnicos
   const [technicians, setTechnicians] = useState(technicianData);
 
-  // Estado para calendario
   const [events, setEvents] = useState(calendarEvents);
   const [calendarFilters, setCalendarFilters] = useState({
     types: ['programado', 'correctivo'],
@@ -52,134 +42,65 @@ export const AppProvider = ({ children }) => {
   });
   const [filteredEvents, setFilteredEvents] = useState(calendarEvents);
 
-  // Efecto para filtrar servicios cuando cambien los filtros
+  // --- EFECTOS ---
   useEffect(() => {
     setFilteredServices(filterServices(services, serviceFilters));
   }, [services, serviceFilters]);
 
-  // Efecto para filtrar cotizaciones cuando cambien los filtros
   useEffect(() => {
     setFilteredQuotes(filterQuotes(quotes, quoteFilters));
   }, [quotes, quoteFilters]);
 
-  // Efecto para filtrar eventos de calendario cuando cambien los filtros
   useEffect(() => {
     setFilteredEvents(filterCalendarEvents(events, calendarFilters));
   }, [events, calendarFilters]);
 
-  // Función para agregar un nuevo servicio
-  const addService = (newService) => {
-    setServices(prev => [newService, ...prev]);
-  };
+  // --- FUNCIONES MEMORIZADAS CON useCallback ---
+  const addService = useCallback((newService) => setServices(prev => [newService, ...prev]), []);
+  const updateService = useCallback((id, updatedService) => {
+    setServices(prev => prev.map(s => s.id === id ? { ...s, ...updatedService } : s));
+  }, []);
+  const deleteService = useCallback((id) => setServices(prev => prev.filter(s => s.id !== id)), []);
 
-  // Función para actualizar un servicio existente
-  const updateService = (id, updatedService) => {
-    setServices(prev => 
-      prev.map(service => 
-        service.id === id ? { ...service, ...updatedService } : service
-      )
-    );
-  };
+  const addQuote = useCallback((newQuote) => setQuotes(prev => [newQuote, ...prev]), []);
+  const updateQuote = useCallback((id, updatedQuote) => {
+    setQuotes(prev => prev.map(q => q.id === id ? { ...q, ...updatedQuote } : q));
+  }, []);
+  const deleteQuote = useCallback((id) => setQuotes(prev => prev.filter(q => q.id !== id)), []);
 
-  // Función para eliminar un servicio
-  const deleteService = (id) => {
-    setServices(prev => prev.filter(service => service.id !== id));
-  };
+  const addTechnician = useCallback((newTechnician) => setTechnicians(prev => [...prev, newTechnician]), []);
+  const updateTechnician = useCallback((id, updatedTechnician) => {
+    setTechnicians(prev => prev.map(t => t.id === id ? { ...t, ...updatedTechnician } : t));
+  }, []);
+  const deleteTechnician = useCallback((id) => setTechnicians(prev => prev.filter(t => t.id !== id)), []);
 
-  // Función para agregar una nueva cotización
-  const addQuote = (newQuote) => {
-    setQuotes(prev => [newQuote, ...prev]);
-  };
+  const addEvent = useCallback((newEvent) => setEvents(prev => [...prev, newEvent]), []);
+  const updateEvent = useCallback((id, updatedEvent) => {
+    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updatedEvent } : e));
+  }, []);
+  const deleteEvent = useCallback((id) => setEvents(prev => prev.filter(e => e.id !== id)), []);
 
-  // Función para actualizar una cotización existente
-  const updateQuote = (id, updatedQuote) => {
-    setQuotes(prev => 
-      prev.map(quote => 
-        quote.id === id ? { ...quote, ...updatedQuote } : quote
-      )
-    );
-  };
-
-  // Función para eliminar una cotización
-  const deleteQuote = (id) => {
-    setQuotes(prev => prev.filter(quote => quote.id !== id));
-  };
-
-  // Función para agregar un nuevo técnico
-  const addTechnician = (newTechnician) => {
-    setTechnicians(prev => [...prev, newTechnician]);
-  };
-
-  // Función para actualizar un técnico existente
-  const updateTechnician = (id, updatedTechnician) => {
-    setTechnicians(prev => 
-      prev.map(technician => 
-        technician.id === id ? { ...technician, ...updatedTechnician } : technician
-      )
-    );
-  };
-
-  // Función para eliminar un técnico
-  const deleteTechnician = (id) => {
-    setTechnicians(prev => prev.filter(technician => technician.id !== id));
-  };
-
-  // Función para agregar un nuevo evento de calendario
-  const addEvent = (newEvent) => {
-    setEvents(prev => [...prev, newEvent]);
-  };
-
-  // Función para actualizar un evento existente
-  const updateEvent = (id, updatedEvent) => {
-    setEvents(prev => 
-      prev.map(event => 
-        event.id === id ? { ...event, ...updatedEvent } : event
-      )
-    );
-  };
-
-  // Función para eliminar un evento
-  const deleteEvent = (id) => {
-    setEvents(prev => prev.filter(event => event.id !== id));
-  };
+  // --- VALOR DEL CONTEXTO MEMORIZADO CON useMemo ---
+  const contextValue = useMemo(() => ({
+    services, filteredServices, serviceFilters, setServiceFilters,
+    addService, updateService, deleteService,
+    quotes, filteredQuotes, quoteFilters, setQuoteFilters,
+    addQuote, updateQuote, deleteQuote,
+    technicians, addTechnician, updateTechnician, deleteTechnician,
+    events, filteredEvents, calendarFilters, setCalendarFilters,
+    addEvent, updateEvent, deleteEvent
+  }), [
+    services, filteredServices, serviceFilters,
+    addService, updateService, deleteService,
+    quotes, filteredQuotes, quoteFilters,
+    addQuote, updateQuote, deleteQuote,
+    technicians, addTechnician, updateTechnician, deleteTechnician,
+    events, filteredEvents, calendarFilters,
+    addEvent, updateEvent, deleteEvent
+  ]);
 
   return (
-    <AppContext.Provider 
-      value={{ 
-        // Servicios
-        services,
-        filteredServices,
-        serviceFilters,
-        setServiceFilters,
-        addService,
-        updateService,
-        deleteService,
-        
-        // Cotizaciones
-        quotes,
-        filteredQuotes,
-        quoteFilters,
-        setQuoteFilters,
-        addQuote,
-        updateQuote,
-        deleteQuote,
-        
-        // Técnicos
-        technicians,
-        addTechnician,
-        updateTechnician,
-        deleteTechnician,
-        
-        // Eventos de calendario
-        events,
-        filteredEvents,
-        calendarFilters,
-        setCalendarFilters,
-        addEvent,
-        updateEvent,
-        deleteEvent
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
