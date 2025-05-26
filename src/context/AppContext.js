@@ -28,9 +28,33 @@ export const AppProvider = ({ children }) => {
   const [isLoadingServices, setIsLoadingServices] = useState(true);
   const [errorServices, setErrorServices] = useState(null);
 
-  // 4. EFECTO PARA CARGAR CLIENTES DESDE LA API
+  // 3.4. ESTADOS PARA EQUIPOS
+  const [equipment, setEquipment] = useState([]);
+  const [isLoadingEquipment, setIsLoadingEquipment] = useState(true);
+  const [errorEquipment, setErrorEquipment] = useState(null);
+
+  // 3.5. ESTADOS PARA ESTADÍSTICAS DEL DASHBOARD
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+  const [errorDashboard, setErrorDashboard] = useState(null);
+
+  // 3.6. ESTADOS PARA ESTADÍSTICAS DE SERVICIOS
+  const [serviceStats, setServiceStats] = useState(null);
+  const [isLoadingServiceStats, setIsLoadingServiceStats] = useState(false);
+  const [errorServiceStats, setErrorServiceStats] = useState(null);
+
+  // 3.7. ESTADOS PARA RANKINGS DE TÉCNICOS E INGRESOS
+  const [technicianRankings, setTechnicianRankings] = useState(null);
+  const [incomeStats, setIncomeStats] = useState(null);
+  const [isLoadingTechnicianRankings, setIsLoadingTechnicianRankings] = useState(false);
+  const [isLoadingIncomeStats, setIsLoadingIncomeStats] = useState(false);
+  const [errorTechnicianRankings, setErrorTechnicianRankings] = useState(null);
+  const [errorIncomeStats, setErrorIncomeStats] = useState(null);
+
+  // 4. EFECTO PARA CARGAR CLIENTES DESDE LA API (Solo para ADMIN y TECHNICIAN)
   const fetchClients = useCallback(async () => { // Hacemos fetchClients accesible
-    if (user?.token) {
+    // Solo cargar clientes si el usuario NO es CLIENT (por seguridad)
+    if (user?.token && user?.role !== 'CLIENT') {
       setIsLoadingClients(true);
       setErrorClients(null);
       try {
@@ -51,8 +75,10 @@ export const AppProvider = ({ children }) => {
         setIsLoadingClients(false);
       }
     } else {
-      setClients([]); // Limpia los clientes si no hay token/usuario
+      // Para CLIENTs o sin token, no cargar lista de clientes (por seguridad)
+      setClients([]);
       setIsLoadingClients(false);
+      setErrorClients(null);
     }
   }, [user]); // fetchClients depende de user
 
@@ -62,17 +88,38 @@ export const AppProvider = ({ children }) => {
 
   // 4.1. EFECTO PARA CARGAR TÉCNICOS DESDE LA API
   const WorkspaceTechnicians = useCallback(async () => {
+    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Token en sessionStorage:', sessionStorage.getItem('currentUser'));
+    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - User object completo:', JSON.stringify(user, null, 2));
+    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - User role:', user?.role);
+    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - User token length:', user?.token?.length);
+    
     if (user?.token) {
       setIsLoadingTechnicians(true);
       setErrorTechnicians(null);
       try {
+        console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Authorization header:', `Bearer ${user.token}`);
+        
         const response = await fetch('http://localhost:3001/api/technicians', {
           headers: {
-            'Authorization': `Bearer ${user.token}`
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
           }
         });
+        
+        console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Response status:', response.status);
+        console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Response ok:', response.ok);
+        
+        if (response.status === 403) {
+          console.error('🚨🚨🚨 ERROR 403: El usuario no tiene permisos para acceder a técnicos');
+          console.error('🚨🚨🚨 Usuario actual:', user?.role);
+          console.error('🚨🚨🚨 Permisos requeridos: ADMIN únicamente');
+          throw new Error(`Acceso denegado: No tienes permisos para ver técnicos. Tu rol actual es: ${user?.role || 'desconocido'}. Se requiere rol ADMIN.`);
+        }
+        
         if (!response.ok) {
-          throw new Error('No se pudo obtener la lista de técnicos.');
+          const errorText = await response.text();
+          console.error('🚨🚨🚨 Error response body:', errorText);
+          throw new Error(`Error ${response.status}: ${errorText || 'No se pudo obtener la lista de técnicos.'}`);
         }
         const responseData = await response.json();
         console.log(">>> RESPUESTA COMPLETA DE TÉCNICOS:", JSON.stringify(responseData, null, 2));
@@ -98,6 +145,11 @@ export const AppProvider = ({ children }) => {
 
   // 4.2. EFECTO PARA CARGAR COTIZACIONES DESDE LA API
   const fetchQuotes = useCallback(async (filters = {}) => {
+    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Token en sessionStorage:', sessionStorage.getItem('currentUser'));
+    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - User object completo:', JSON.stringify(user, null, 2));
+    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - User role:', user?.role);
+    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - User token length:', user?.token?.length);
+    
     if (user?.token) {
       setIsLoadingQuotes(true);
       setErrorQuotes(null);
@@ -111,13 +163,30 @@ export const AppProvider = ({ children }) => {
         const queryString = queryParams.toString();
         const url = `http://localhost:3001/api/quotes${queryString ? `?${queryString}` : ''}`;
         
+        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - URL:', url);
+        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Authorization header:', `Bearer ${user.token}`);
+        
         const response = await fetch(url, {
           headers: {
-            'Authorization': `Bearer ${user.token}`
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
           }
         });
+        
+        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Response status:', response.status);
+        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Response ok:', response.ok);
+        
+        if (response.status === 403) {
+          console.error('🚨🚨🚨 ERROR 403: El usuario no tiene permisos para acceder a cotizaciones');
+          console.error('🚨🚨🚨 Usuario actual:', user?.role);
+          console.error('🚨🚨🚨 Permisos requeridos: ADMIN o TECHNICIAN');
+          throw new Error(`Acceso denegado: No tienes permisos para ver cotizaciones. Tu rol actual es: ${user?.role || 'desconocido'}`);
+        }
+        
         if (!response.ok) {
-          throw new Error('No se pudo obtener la lista de cotizaciones.');
+          const errorText = await response.text();
+          console.error('🚨🚨🚨 Error response body:', errorText);
+          throw new Error(`Error ${response.status}: ${errorText || 'No se pudo obtener la lista de cotizaciones.'}`);
         }
         const responseData = await response.json();
         console.log(">>> RESPUESTA COMPLETA DE COTIZACIONES:", JSON.stringify(responseData, null, 2));
@@ -189,6 +258,52 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     fetchServices(); // Llama a fetchServices
   }, [fetchServices]); // useEffect ahora depende de la función fetchServices
+
+  // 4.4. EFECTO PARA CARGAR EQUIPOS DESDE LA API
+  const fetchEquipment = useCallback(async (filters = {}) => {
+    if (user?.token) {
+      setIsLoadingEquipment(true);
+      setErrorEquipment(null);
+      try {
+        // Construir query parameters para filtros
+        const queryParams = new URLSearchParams();
+        if (filters.clientId) queryParams.append('clientId', filters.clientId);
+        if (filters.status && filters.status !== 'todos') queryParams.append('status', filters.status.toUpperCase());
+        if (filters.type && filters.type !== 'todos') queryParams.append('type', filters.type);
+        if (filters.brand && filters.brand !== 'todos') queryParams.append('brand', filters.brand);
+        
+        const queryString = queryParams.toString();
+        const url = `http://localhost:3001/api/equipment${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('No se pudo obtener la lista de equipos.');
+        }
+        const responseData = await response.json();
+        console.log(">>> RESPUESTA COMPLETA DE EQUIPOS:", JSON.stringify(responseData, null, 2));
+        // Extraer equipos basándose en la estructura del backend
+        const equipmentArray = Array.isArray(responseData.data) ? responseData.data : [];
+        console.log(">>> EQUIPOS EXTRAÍDOS:", equipmentArray.length, "equipos encontrados");
+        setEquipment(equipmentArray);
+      } catch (err) {
+        console.error("Error en fetchEquipment:", err);
+        setErrorEquipment(err.message);
+      } finally {
+        setIsLoadingEquipment(false);
+      }
+    } else {
+      setEquipment([]); // Limpia los equipos si no hay token/usuario
+      setIsLoadingEquipment(false);
+    }
+  }, [user]); // fetchEquipment depende de user
+
+  useEffect(() => {
+    fetchEquipment(); // Llama a fetchEquipment
+  }, [fetchEquipment]); // useEffect ahora depende de la función fetchEquipment
 
 
   // 5. FUNCIONES CRUD PARA CLIENTES
@@ -683,7 +798,14 @@ export const AppProvider = ({ children }) => {
     console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API (SERVICIOS):', serviceData);
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS ENVIADOS AL BACKEND (SERVICIOS):", JSON.stringify(serviceData, null, 2));
+      // Preparar datos para envío - para CLIENTs quitar clientId (se asigna automáticamente en backend)
+      const dataToSend = {...serviceData};
+      if (user?.role === 'CLIENT' && 'clientId' in dataToSend) {
+        delete dataToSend.clientId;
+        console.log('🔥🔥🔥 CLIENT USER: Removiendo clientId del payload, será asignado automáticamente por el backend');
+      }
+      
+      console.log(">>>>> DATOS ENVIADOS AL BACKEND (SERVICIOS):", JSON.stringify(dataToSend, null, 2));
 
       const response = await fetch('http://localhost:3001/api/services', {
         method: 'POST',
@@ -691,7 +813,7 @@ export const AppProvider = ({ children }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
         },
-        body: JSON.stringify(serviceData)
+        body: JSON.stringify(dataToSend)
       });
 
       if (!response.ok) {
@@ -844,7 +966,7 @@ export const AppProvider = ({ children }) => {
       console.log(">>> Completando servicio:", serviceId, "con datos:", completionData);
       
       const response = await fetch(`http://localhost:3001/api/services/${serviceId}/complete`, {
-        method: 'POST',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${user.token}`
@@ -912,6 +1034,340 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
+  // 5.3. FUNCIONES CRUD PARA EQUIPOS
+  const addEquipment = useCallback(async (equipmentData) => {
+    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API (EQUIPOS):', equipmentData);
+    if (!user?.token) return;
+    try {
+      // Preparar datos para envío - para CLIENTs quitar clientId (se asigna automáticamente en backend)
+      const dataToSend = {...equipmentData};
+      if (user?.role === 'CLIENT' && 'clientId' in dataToSend) {
+        delete dataToSend.clientId;
+        console.log('🔥🔥🔥 CLIENT USER: Removiendo clientId del payload, será asignado automáticamente por el backend');
+      }
+      
+      console.log(">>>>> DATOS ENVIADOS AL BACKEND (EQUIPOS):", JSON.stringify(dataToSend, null, 2));
+
+      const response = await fetch('http://localhost:3001/api/equipment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(dataToSend)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (EQUIPOS):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo en la operación. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const newEquipmentResponse = await response.json();
+      console.log("✅ EQUIPO CREADO - RESPUESTA DEL BACKEND:", JSON.stringify(newEquipmentResponse, null, 2));
+
+      // El backend devuelve directamente el equipo creado
+      const equipmentToAdd = newEquipmentResponse.data ? newEquipmentResponse.data : newEquipmentResponse;
+      console.log("✅ EQUIPO A AÑADIR AL ESTADO:", JSON.stringify(equipmentToAdd, null, 2));
+
+      if (equipmentToAdd && equipmentToAdd.id) {
+        setEquipment(prevEquipment => [equipmentToAdd, ...prevEquipment]);
+      } else {
+        console.error("El objeto equipmentToAdd no es válido o no tiene ID:", equipmentToAdd);
+        fetchEquipment(); // Recarga la lista como fallback
+      }
+      return equipmentToAdd;
+
+    } catch (error) {
+      console.error("Error detallado en addEquipment:", error.message);
+      throw error;
+    }
+  }, [user, fetchEquipment]);
+
+  const updateEquipment = useCallback(async (equipmentId, equipmentDataToUpdate) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (EQUIPOS):", JSON.stringify({ equipmentId, ...equipmentDataToUpdate }, null, 2));
+
+      const response = await fetch(`http://localhost:3001/api/equipment/${equipmentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(equipmentDataToUpdate)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE EQUIPOS):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo al actualizar. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const updatedEquipmentResponse = await response.json();
+      console.log("✅ EQUIPO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedEquipmentResponse, null, 2));
+
+      const equipmentToUpdateInState = updatedEquipmentResponse.data ? updatedEquipmentResponse.data : updatedEquipmentResponse;
+      console.log("✅ EQUIPO A ACTUALIZAR EN EL ESTADO:", JSON.stringify(equipmentToUpdateInState, null, 2));
+
+      if (equipmentToUpdateInState && equipmentToUpdateInState.id) {
+        setEquipment(prevEquipment =>
+          prevEquipment.map(e => (e.id === equipmentId ? equipmentToUpdateInState : e))
+        );
+      } else {
+        console.error("El objeto equipmentToUpdateInState no es válido o no tiene ID:", equipmentToUpdateInState);
+        fetchEquipment(); // Recarga como fallback
+      }
+      return equipmentToUpdateInState;
+
+    } catch (error) {
+      console.error("Error detallado en updateEquipment:", error.message);
+      throw error;
+    }
+  }, [user, fetchEquipment]);
+
+  const deleteEquipment = useCallback(async (equipmentId) => {
+    if (!user?.token) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/equipment/${equipmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar el equipo.');
+      }
+      console.log("✅ EQUIPO ELIMINADO CON ID:", equipmentId);
+      setEquipment(prev => prev.filter(e => e.id !== equipmentId));
+    } catch (error) {
+      console.error("Error en deleteEquipment:", error);
+      throw error;
+    }
+  }, [user]);
+
+  const updateEquipmentStatus = useCallback(async (equipmentId, newStatus) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>> Actualizando estado del equipo:", equipmentId, "a", newStatus);
+      
+      const response = await fetch(`http://localhost:3001/api/equipment/${equipmentId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ 
+          status: newStatus.toUpperCase() // ACTIVE, INACTIVE, MAINTENANCE, BROKEN
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar estado del equipo');
+      }
+
+      const updatedEquipmentResponse = await response.json();
+      console.log("✅ ESTADO DEL EQUIPO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedEquipmentResponse, null, 2));
+      
+      // Actualizar estado local optimísticamente
+      setEquipment(prevEquipment =>
+        prevEquipment.map(e => 
+          e.id === equipmentId 
+            ? { ...e, status: newStatus.toUpperCase() }
+            : e
+        )
+      );
+      
+      return updatedEquipmentResponse;
+    } catch (error) {
+      console.error("Error en updateEquipmentStatus:", error);
+      throw error;
+    }
+  }, [user]);
+
+  // 5.4. FUNCIONES PARA ESTADÍSTICAS
+  const fetchDashboardStats = useCallback(async () => {
+    console.log('🔥🔥🔥 STATS: Obteniendo estadísticas del dashboard');
+    
+    // Solo cargar estadísticas si el usuario es ADMIN
+    if (user?.token && user?.role === 'ADMIN') {
+      setIsLoadingDashboard(true);
+      setErrorDashboard(null);
+      try {
+        const response = await fetch('http://localhost:3001/api/stats/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error ${response.status}: ${errorText || 'No se pudieron obtener las estadísticas del dashboard.'}`);
+        }
+        
+        const responseData = await response.json();
+        console.log(">>> ESTADÍSTICAS DEL DASHBOARD:", JSON.stringify(responseData, null, 2));
+        
+        const statsData = responseData.data || responseData;
+        setDashboardStats(statsData);
+        
+      } catch (err) {
+        console.error("Error en fetchDashboardStats:", err);
+        setErrorDashboard(err.message);
+      } finally {
+        setIsLoadingDashboard(false);
+      }
+    } else {
+      // Para no-ADMINs, limpiar estadísticas
+      setDashboardStats(null);
+      setIsLoadingDashboard(false);
+      setErrorDashboard(null);
+    }
+  }, [user]);
+
+  const fetchServiceStats = useCallback(async (filters = {}) => {
+    console.log('🔥🔥🔥 STATS: Obteniendo estadísticas de servicios', filters);
+    
+    if (user?.token && user?.role === 'ADMIN') {
+      setIsLoadingServiceStats(true);
+      setErrorServiceStats(null);
+      try {
+        // Construir query parameters para filtros
+        const queryParams = new URLSearchParams();
+        if (filters.startDate) queryParams.append('startDate', filters.startDate);
+        if (filters.endDate) queryParams.append('endDate', filters.endDate);
+        if (filters.technicianId) queryParams.append('technicianId', filters.technicianId);
+        if (filters.clientId) queryParams.append('clientId', filters.clientId);
+        
+        const queryString = queryParams.toString();
+        const url = `http://localhost:3001/api/stats/services${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error ${response.status}: ${errorText || 'No se pudieron obtener las estadísticas de servicios.'}`);
+        }
+        
+        const responseData = await response.json();
+        console.log(">>> ESTADÍSTICAS DE SERVICIOS:", JSON.stringify(responseData, null, 2));
+        
+        const statsData = responseData.data || responseData;
+        setServiceStats(statsData);
+        
+      } catch (err) {
+        console.error("Error en fetchServiceStats:", err);
+        setErrorServiceStats(err.message);
+      } finally {
+        setIsLoadingServiceStats(false);
+      }
+    } else {
+      setServiceStats(null);
+      setIsLoadingServiceStats(false);
+      setErrorServiceStats(null);
+    }
+  }, [user]);
+
+  const fetchIncomeStats = useCallback(async (period = 'month') => {
+    console.log('🔥🔥🔥 STATS: Obteniendo estadísticas de ingresos', period);
+    
+    if (user?.token && user?.role === 'ADMIN') {
+      setIsLoadingIncomeStats(true);
+      setErrorIncomeStats(null);
+      try {
+        const response = await fetch(`http://localhost:3001/api/stats/income?period=${period}`, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error ${response.status}: ${errorText || 'No se pudieron obtener las estadísticas de ingresos.'}`);
+        }
+        
+        const responseData = await response.json();
+        console.log(">>> ESTADÍSTICAS DE INGRESOS:", JSON.stringify(responseData, null, 2));
+        
+        const statsData = responseData.data || responseData;
+        setIncomeStats(statsData);
+        
+      } catch (err) {
+        console.error("Error en fetchIncomeStats:", err);
+        setErrorIncomeStats(err.message);
+      } finally {
+        setIsLoadingIncomeStats(false);
+      }
+    } else {
+      setIncomeStats(null);
+      setIsLoadingIncomeStats(false);
+      setErrorIncomeStats(null);
+    }
+  }, [user]);
+
+  const fetchTechnicianRankings = useCallback(async () => {
+    console.log('🔥🔥🔥 STATS: Obteniendo rankings de técnicos');
+    
+    if (user?.token && user?.role === 'ADMIN') {
+      setIsLoadingTechnicianRankings(true);
+      setErrorTechnicianRankings(null);
+      try {
+        const response = await fetch('http://localhost:3001/api/stats/technicians/rankings', {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error ${response.status}: ${errorText || 'No se pudieron obtener los rankings de técnicos.'}`);
+        }
+        
+        const responseData = await response.json();
+        console.log(">>> RANKINGS DE TÉCNICOS:", JSON.stringify(responseData, null, 2));
+        
+        const statsData = responseData.data || responseData;
+        setTechnicianRankings(statsData);
+        
+      } catch (err) {
+        console.error("Error en fetchTechnicianRankings:", err);
+        setErrorTechnicianRankings(err.message);
+      } finally {
+        setIsLoadingTechnicianRankings(false);
+      }
+    } else {
+      setTechnicianRankings(null);
+      setIsLoadingTechnicianRankings(false);
+      setErrorTechnicianRankings(null);
+    }
+  }, [user]);
+
 
   // 6. VALOR DEL CONTEXTO
   const contextValue = useMemo(() => ({
@@ -955,12 +1411,45 @@ export const AppProvider = ({ children }) => {
     assignTechnician,
     completeService,
     updateServiceStatus,
-    fetchServices // Exponemos fetchServices para recargar manualmente con filtros
+    fetchServices, // Exponemos fetchServices para recargar manualmente con filtros
+
+    // Estados y funciones de equipos
+    equipment,
+    isLoadingEquipment,
+    errorEquipment,
+    addEquipment,
+    updateEquipment,
+    deleteEquipment,
+    updateEquipmentStatus,
+    fetchEquipment, // Exponemos fetchEquipment para recargar manualmente con filtros
+
+    // Estados y funciones de estadísticas
+    dashboardStats,
+    isLoadingDashboard,
+    errorDashboard,
+    fetchDashboardStats,
+    serviceStats,
+    isLoadingServiceStats,
+    errorServiceStats,
+    fetchServiceStats,
+    incomeStats,
+    isLoadingIncomeStats,
+    errorIncomeStats,
+    fetchIncomeStats,
+    technicianRankings,
+    isLoadingTechnicianRankings,
+    errorTechnicianRankings,
+    fetchTechnicianRankings
   }), [
     clients, isLoadingClients, errorClients, addClient, updateClient, deleteClient, updateClientStatus, fetchClients,
     technicians, isLoadingTechnicians, errorTechnicians, addTechnician, updateTechnician, deleteTechnician, WorkspaceTechnicians,
     quotes, isLoadingQuotes, errorQuotes, addQuote, updateQuote, deleteQuote, approveQuote, rejectQuote, fetchQuotes,
-    services, isLoadingServices, errorServices, addService, updateService, deleteService, assignTechnician, completeService, updateServiceStatus, fetchServices
+    services, isLoadingServices, errorServices, addService, updateService, deleteService, assignTechnician, completeService, updateServiceStatus, fetchServices,
+    equipment, isLoadingEquipment, errorEquipment, addEquipment, updateEquipment, deleteEquipment, updateEquipmentStatus, fetchEquipment,
+    dashboardStats, isLoadingDashboard, errorDashboard, fetchDashboardStats,
+    serviceStats, isLoadingServiceStats, errorServiceStats, fetchServiceStats,
+    incomeStats, isLoadingIncomeStats, errorIncomeStats, fetchIncomeStats,
+    technicianRankings, isLoadingTechnicianRankings, errorTechnicianRankings, fetchTechnicianRankings
   ]);
 
   return (

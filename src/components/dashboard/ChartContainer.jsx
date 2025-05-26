@@ -25,6 +25,39 @@ ChartJS.register(
 const ChartContainer = ({ title, data }) => {
   const [activeView, setActiveView] = useState('month');
 
+  // Validar que data exista y tenga la estructura correcta
+  if (!data || typeof data !== 'object') {
+    return (
+      <div className="card-gradient p-6 animate-fade-in">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-semibold text-gray-900 m-0">{title}</h3>
+        </div>
+        <div className="w-full h-[350px] flex items-center justify-center bg-white/50 rounded-xl">
+          <p className="text-gray-500">Cargando datos del gráfico...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Obtener datos actuales con fallback
+  const getCurrentData = () => {
+    const currentData = data[activeView];
+    if (!currentData || !currentData.labels || !currentData.datasets) {
+      return {
+        labels: ['Sin datos'],
+        datasets: [{
+          label: 'Sin datos',
+          data: [0],
+          borderColor: '#28a745',
+          backgroundColor: 'rgba(40, 167, 69, 0.2)',
+          tension: 0.3,
+          fill: true,
+        }]
+      };
+    }
+    return currentData;
+  };
+
   // Opciones del chart mejoradas
   const options = {
     responsive: true,
@@ -136,11 +169,7 @@ const ChartContainer = ({ title, data }) => {
       <div className="w-full h-[350px] relative bg-white/50 rounded-xl p-4">
         <Line 
           options={options} 
-          data={
-            activeView === 'day' ? data.day : 
-            activeView === 'month' ? data.month : 
-            data.year
-          } 
+          data={getCurrentData()} 
         />
       </div>
     </div>

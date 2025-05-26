@@ -68,7 +68,6 @@ const QuotesTable = ({ quotes, onView, onEdit, onDelete }) => {
       <table className="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">ID</th>
             <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">Título</th>
             <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">Cliente</th>
             <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">Monto</th>
@@ -82,9 +81,6 @@ const QuotesTable = ({ quotes, onView, onEdit, onDelete }) => {
             console.log('🔥🔥🔥 Rendering quote row:', quote);
             return (
               <tr key={quote.id}>
-                <td className="py-3 px-4 border-b border-gray-light font-mono text-sm">
-                  {quote.id}
-                </td>
                 <td className="py-3 px-4 border-b border-gray-light">
                   <div className="font-medium">{quote.title || 'Sin título'}</div>
                   {quote.description && (
@@ -119,7 +115,7 @@ const QuotesTable = ({ quotes, onView, onEdit, onDelete }) => {
                         console.log('🔥🔥🔥 View button clicked for quote:', quote);
                         onView && onView(quote);
                       }}
-                      className="w-8 h-8 rounded flex items-center justify-center border-none cursor-pointer transition-all hover:bg-blue-50 hover:text-blue-600"
+                      className="w-8 h-8 rounded flex items-center justify-center border-none cursor-pointer transition-all bg-blue-100 text-blue-600 hover:bg-blue-200"
                       title="Ver detalles"
                     >
                       <FaEye className="text-sm" />
@@ -129,7 +125,7 @@ const QuotesTable = ({ quotes, onView, onEdit, onDelete }) => {
                         console.log('🔥🔥🔥 Edit button clicked for quote:', quote);
                         onEdit && onEdit(quote);
                       }}
-                      className="w-8 h-8 rounded flex items-center justify-center border-none cursor-pointer transition-all hover:bg-green-50 hover:text-green-600"
+                      className="w-8 h-8 rounded flex items-center justify-center border-none cursor-pointer transition-all bg-green-100 text-green-600 hover:bg-green-200"
                       title="Editar"
                     >
                       <FaEdit className="text-sm" />
@@ -139,7 +135,7 @@ const QuotesTable = ({ quotes, onView, onEdit, onDelete }) => {
                         console.log('🔥🔥🔥 Delete button clicked for quote:', quote);
                         onDelete && onDelete(quote);
                       }}
-                      className="w-8 h-8 rounded flex items-center justify-center border-none cursor-pointer transition-all hover:bg-red-50 hover:text-red-600"
+                      className="w-8 h-8 rounded flex items-center justify-center border-none cursor-pointer transition-all bg-red-100 text-red-600 hover:bg-red-200"
                       title="Eliminar"
                     >
                       <FaTrash className="text-sm" />
@@ -152,7 +148,7 @@ const QuotesTable = ({ quotes, onView, onEdit, onDelete }) => {
           
           {quotes.length === 0 && (
             <tr>
-              <td colSpan="7" className="py-8 text-center text-gray-500 border-b border-gray-light">
+              <td colSpan="6" className="py-8 text-center text-gray-500 border-b border-gray-light">
                 <div className="flex flex-col items-center">
                   <div className="text-lg font-medium mb-2">No se encontraron cotizaciones</div>
                   <div className="text-sm">Intenta ajustar los filtros o crear una nueva cotización</div>
