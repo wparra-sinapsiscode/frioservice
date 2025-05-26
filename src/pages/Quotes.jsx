@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaPlus } from 'react-icons/fa';
 import QuoteFilters from '../components/quotes/QuoteFilters';
 import QuotesTable from '../components/quotes/QuotesTable';
 import QuoteModal from '../components/quotes/QuoteModal';
-import { quotesData, filterQuotes } from '../utils/quotesMockData';
-import { clientData, technicianData } from '../utils/mockData';
+import { useApp } from '../hooks/useApp';
+import { getClientDisplayName } from '../utils/clientUtils';
 
 const Quotes = () => {
+  console.log('🔥🔥🔥 Quotes component rendered');
+  
+  const { 
+    quotes, 
+    isLoadingQuotes, 
+    errorQuotes,
+    clients,
+    fetchQuotes, 
+    addQuote, 
+    updateQuote, 
+    deleteQuote,
+    fetchClients 
+  } = useApp();
+  
   const [filters, setFilters] = useState({
     status: 'todos',
     client: 'todos',
@@ -16,61 +30,155 @@ const Quotes = () => {
   });
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [quotes, setQuotes] = useState(quotesData);
   const [editingQuote, setEditingQuote] = useState(null);
   const [viewingQuote, setViewingQuote] = useState(null);
   
-  // Filtrar cotizaciones según los filtros aplicados
-  const filteredQuotes = filterQuotes(quotes, filters);
+  // Fetch data on component mount
+  useEffect(() => {
+    console.log('🔥🔥🔥 Quotes useEffect - fetching quotes and clients');
+    fetchQuotes();
+    fetchClients();
+  }, [fetchQuotes, fetchClients]);
   
-  // Manejar cambios en los filtros
+  // Filter quotes based on current filters
+  const filteredQuotes = quotes.filter(quote => {
+    console.log('🔥🔥🔥 Filtering quote:', quote);
+    
+    // Status filter
+    if (filters.status !== 'todos' && quote.status !== filters.status) {
+      return false;
+    }
+    
+    // Client filter
+    if (filters.client !== 'todos' && quote.clientId !== filters.client) {
+      return false;
+    }
+    
+    // Date range filter
+    if (filters.startDate && new Date(quote.createdAt) < new Date(filters.startDate)) {
+      return false;
+    }
+    if (filters.endDate && new Date(quote.createdAt) > new Date(filters.endDate)) {
+      return false;
+    }
+    
+    return true;
+  });
+  
+  // Handle filter changes
   const handleFilterChange = (newFilters) => {
+    console.log('🔥🔥🔥 Filter change:', newFilters);
     setFilters(newFilters);
   };
   
-  // Abrir modal para nueva cotización
+  // Open modal for new quote
   const handleNewQuote = () => {
+    console.log('🔥🔥🔥 Opening new quote modal');
     setIsModalOpen(true);
   };
   
-  // Guardar nueva cotización
-  const handleSaveQuote = (newQuote) => {
-    if (editingQuote) {
-      // Actualizar cotización existente
-      setQuotes(quotes.map(quote => 
-        quote.id === editingQuote.id ? { ...newQuote, id: editingQuote.id } : quote
-      ));
-      setEditingQuote(null);
-    } else {
-      // Agregar nueva cotización al inicio del array
-      const newId = Math.max(...quotes.map(q => parseInt(q.id.replace('Q', '')))) + 1;
-      setQuotes([{ ...newQuote, id: `Q${newId.toString().padStart(3, '0')}` }, ...quotes]);
+  // Save quote (create or update)
+  const handleSaveQuote = async (quoteData) => {
+    console.log('🔥🔥🔥 Saving quote:', quoteData);
+    try {
+      if (editingQuote) {
+        // Update existing quote
+        console.log('🔥🔥🔥 Updating quote with ID:', editingQuote.id);
+        await updateQuote(editingQuote.id, quoteData);
+        setEditingQuote(null);
+      } else {
+        // Create new quote
+        console.log('🔥🔥🔥 Creating new quote');
+        await addQuote(quoteData);
+      }
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('🔥🔥🔥 Error saving quote:', error);
+      alert('Error al guardar la cotización. Por favor, intente nuevamente.');
     }
   };
 
-  // Ver detalles de cotización
+  // View quote details
   const handleViewQuote = (quote) => {
+    console.log('🔥🔥🔥 Viewing quote:', quote);
     setViewingQuote(quote);
   };
 
-  // Editar cotización
+  // Edit quote
   const handleEditQuote = (quote) => {
+    console.log('🔥🔥🔥 Editing quote:', quote);
     setEditingQuote(quote);
     setIsModalOpen(true);
   };
 
-  // Eliminar cotización
-  const handleDeleteQuote = (quote) => {
+  // Delete quote
+  const handleDeleteQuote = async (quote) => {
+    console.log('🔥🔥🔥 Attempting to delete quote:', quote);
     if (window.confirm(`¿Está seguro de eliminar la cotización ${quote.id}?`)) {
-      setQuotes(quotes.filter(q => q.id !== quote.id));
+      try {
+        console.log('🔥🔥🔥 Deleting quote with ID:', quote.id);
+        await deleteQuote(quote.id);
+      } catch (error) {
+        console.error('🔥🔥🔥 Error deleting quote:', error);
+        alert('Error al eliminar la cotización. Por favor, intente nuevamente.');
+      }
     }
   };
 
-  // Cerrar modal
+  // Close modal
   const handleCloseModal = () => {
+    console.log('🔥🔥🔥 Closing modal');
     setIsModalOpen(false);
     setEditingQuote(null);
   };
+
+  // Get client info for modal display
+  const getClientInfo = (clientId) => {
+    console.log('🔥🔥🔥 Quote detail modal - clientId:', clientId);
+    console.log('🔥🔥🔥 Quote detail modal - available clients:', clients);
+    
+    const client = clients.find(c => c.id === clientId);
+    console.log('🔥🔥🔥 Quote detail modal - found client:', client);
+    
+    if (!client) {
+      return { label: 'Cliente:', name: 'Cliente no encontrado' };
+    }
+    
+    if (client.clientType === 'COMPANY') {
+      return { 
+        label: 'Razón Social:', 
+        name: getClientDisplayName(client) 
+      };
+    } else if (client.clientType === 'PERSONAL') {
+      return { 
+        label: 'Nombre Completo:', 
+        name: getClientDisplayName(client) 
+      };
+    }
+    
+    return { 
+      label: 'Cliente:', 
+      name: getClientDisplayName(client) 
+    };
+  };
+
+  // Loading state
+  if (isLoadingQuotes) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Cargando cotizaciones...</div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (errorQuotes) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg text-red-600">Error: {errorQuotes}</div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -92,7 +200,7 @@ const Quotes = () => {
       <QuoteFilters 
         filters={filters} 
         onFilterChange={handleFilterChange} 
-        clients={clientData}
+        clients={clients}
       />
       
       {/* Tabla de cotizaciones */}
@@ -127,8 +235,6 @@ const Quotes = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={handleSaveQuote}
-        clients={clientData}
-        technicians={technicianData}
         editingQuote={editingQuote}
       />
 
@@ -147,21 +253,25 @@ const Quotes = () => {
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>Cliente:</strong> {viewingQuote.client}</div>
-                <div><strong>Tipo:</strong> {viewingQuote.type}</div>
-                <div><strong>Monto:</strong> {viewingQuote.amount}</div>
+                <div><strong>Título:</strong> {viewingQuote.title}</div>
+                <div><strong>{getClientInfo(viewingQuote.clientId).label}</strong> {getClientInfo(viewingQuote.clientId).name}</div>
+                <div><strong>Monto:</strong> ${viewingQuote.amount?.toLocaleString()}</div>
                 <div><strong>Estado:</strong> <span className="capitalize">{viewingQuote.status}</span></div>
-                <div><strong>Fecha:</strong> {viewingQuote.date}</div>
-                <div><strong>Técnico:</strong> {viewingQuote.technician}</div>
+                <div><strong>Fecha Creación:</strong> {new Date(viewingQuote.createdAt).toLocaleDateString()}</div>
+                <div><strong>Válida Hasta:</strong> {new Date(viewingQuote.validUntil).toLocaleDateString()}</div>
               </div>
-              <div className="mt-4">
-                <strong>Equipos:</strong>
-                <ul className="list-disc list-inside mt-2">
-                  {viewingQuote.equipment.map((eq, index) => (
-                    <li key={index}>{eq}</li>
-                  ))}
-                </ul>
-              </div>
+              {viewingQuote.description && (
+                <div className="mt-4">
+                  <strong>Descripción:</strong>
+                  <p className="mt-2 text-gray-700">{viewingQuote.description}</p>
+                </div>
+              )}
+              {viewingQuote.notes && (
+                <div className="mt-4">
+                  <strong>Notas:</strong>
+                  <p className="mt-2 text-gray-700">{viewingQuote.notes}</p>
+                </div>
+              )}
               <div className="flex justify-end mt-6">
                 <button 
                   onClick={() => setViewingQuote(null)}

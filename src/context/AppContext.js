@@ -18,6 +18,16 @@ export const AppProvider = ({ children }) => {
   const [isLoadingTechnicians, setIsLoadingTechnicians] = useState(true);
   const [errorTechnicians, setErrorTechnicians] = useState(null);
 
+  // 3.2. ESTADOS PARA COTIZACIONES
+  const [quotes, setQuotes] = useState([]);
+  const [isLoadingQuotes, setIsLoadingQuotes] = useState(true);
+  const [errorQuotes, setErrorQuotes] = useState(null);
+
+  // 3.3. ESTADOS PARA SERVICIOS
+  const [services, setServices] = useState([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [errorServices, setErrorServices] = useState(null);
+
   // 4. EFECTO PARA CARGAR CLIENTES DESDE LA API
   const fetchClients = useCallback(async () => { // Hacemos fetchClients accesible
     if (user?.token) {
@@ -85,6 +95,100 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     WorkspaceTechnicians(); // Llama a WorkspaceTechnicians
   }, [WorkspaceTechnicians]); // useEffect ahora depende de la función WorkspaceTechnicians
+
+  // 4.2. EFECTO PARA CARGAR COTIZACIONES DESDE LA API
+  const fetchQuotes = useCallback(async (filters = {}) => {
+    if (user?.token) {
+      setIsLoadingQuotes(true);
+      setErrorQuotes(null);
+      try {
+        // Construir query parameters para filtros
+        const queryParams = new URLSearchParams();
+        if (filters.status && filters.status !== 'todos') queryParams.append('status', filters.status.toUpperCase());
+        if (filters.clientId) queryParams.append('clientId', filters.clientId);
+        if (filters.serviceId) queryParams.append('serviceId', filters.serviceId);
+        
+        const queryString = queryParams.toString();
+        const url = `http://localhost:3001/api/quotes${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('No se pudo obtener la lista de cotizaciones.');
+        }
+        const responseData = await response.json();
+        console.log(">>> RESPUESTA COMPLETA DE COTIZACIONES:", JSON.stringify(responseData, null, 2));
+        // Extraer cotizaciones basándose en la estructura del backend (igual que clientes/técnicos)
+        const quotesArray = Array.isArray(responseData.data) ? responseData.data : [];
+        console.log(">>> COTIZACIONES EXTRAÍDAS:", quotesArray.length, "cotizaciones encontradas");
+        setQuotes(quotesArray);
+      } catch (err) {
+        console.error("Error en fetchQuotes:", err);
+        setErrorQuotes(err.message);
+      } finally {
+        setIsLoadingQuotes(false);
+      }
+    } else {
+      setQuotes([]); // Limpia las cotizaciones si no hay token/usuario
+      setIsLoadingQuotes(false);
+    }
+  }, [user]); // fetchQuotes depende de user
+
+  useEffect(() => {
+    fetchQuotes(); // Llama a fetchQuotes
+  }, [fetchQuotes]); // useEffect ahora depende de la función fetchQuotes
+
+  // 4.3. EFECTO PARA CARGAR SERVICIOS DESDE LA API
+  const fetchServices = useCallback(async (filters = {}) => {
+    if (user?.token) {
+      setIsLoadingServices(true);
+      setErrorServices(null);
+      try {
+        // Construir query parameters para filtros
+        const queryParams = new URLSearchParams();
+        if (filters.status && filters.status !== 'todos') queryParams.append('status', filters.status.toUpperCase());
+        if (filters.type && filters.type !== 'todos') queryParams.append('type', filters.type.toUpperCase());
+        if (filters.priority && filters.priority !== 'todos') queryParams.append('priority', filters.priority.toUpperCase());
+        if (filters.clientId) queryParams.append('clientId', filters.clientId);
+        if (filters.technicianId) queryParams.append('technicianId', filters.technicianId);
+        if (filters.startDate) queryParams.append('startDate', filters.startDate);
+        if (filters.endDate) queryParams.append('endDate', filters.endDate);
+        
+        const queryString = queryParams.toString();
+        const url = `http://localhost:3001/api/services${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('No se pudo obtener la lista de servicios.');
+        }
+        const responseData = await response.json();
+        console.log(">>> RESPUESTA COMPLETA DE SERVICIOS:", JSON.stringify(responseData, null, 2));
+        // Extraer servicios basándose en la estructura del backend
+        const servicesArray = Array.isArray(responseData.data) ? responseData.data : [];
+        console.log(">>> SERVICIOS EXTRAÍDOS:", servicesArray.length, "servicios encontrados");
+        setServices(servicesArray);
+      } catch (err) {
+        console.error("Error en fetchServices:", err);
+        setErrorServices(err.message);
+      } finally {
+        setIsLoadingServices(false);
+      }
+    } else {
+      setServices([]); // Limpia los servicios si no hay token/usuario
+      setIsLoadingServices(false);
+    }
+  }, [user]); // fetchServices depende de user
+
+  useEffect(() => {
+    fetchServices(); // Llama a fetchServices
+  }, [fetchServices]); // useEffect ahora depende de la función fetchServices
 
 
   // 5. FUNCIONES CRUD PARA CLIENTES
@@ -216,6 +320,46 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
+  const updateClientStatus = useCallback(async (clientId, newStatus) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>> Actualizando estado del cliente:", clientId, "a", newStatus ? 'ACTIVE' : 'INACTIVE');
+      
+      const response = await fetch(`http://localhost:3001/api/clients/${clientId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ 
+          status: newStatus ? 'ACTIVE' : 'INACTIVE' 
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar estado');
+      }
+
+      const updatedClientResponse = await response.json();
+      console.log("✅ ESTADO DEL CLIENTE ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedClientResponse, null, 2));
+      
+      // Actualizar estado local optimísticamente
+      setClients(prevClients =>
+        prevClients.map(c => 
+          c.id === clientId 
+            ? { ...c, status: newStatus ? 'ACTIVE' : 'INACTIVE' }
+            : c
+        )
+      );
+      
+      return updatedClientResponse;
+    } catch (error) {
+      console.error("Error en updateClientStatus:", error);
+      throw error;
+    }
+  }, [user]);
+
   // 5.1. FUNCIONES CRUD PARA TÉCNICOS
   const addTechnician = useCallback(async (technicianData) => {
     console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API:', technicianData);
@@ -338,6 +482,436 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
+  // 5.2. FUNCIONES CRUD PARA COTIZACIONES
+  const addQuote = useCallback(async (quoteData) => {
+    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API (COTIZACIONES):', quoteData);
+    if (!user?.token) return;
+    try {
+      console.log(">>>>> DATOS ENVIADOS AL BACKEND (COTIZACIONES):", JSON.stringify(quoteData, null, 2));
+
+      const response = await fetch('http://localhost:3001/api/quotes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(quoteData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (COTIZACIONES):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo en la operación. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const newQuoteResponse = await response.json();
+      console.log("✅ COTIZACIÓN CREADA - RESPUESTA DEL BACKEND:", JSON.stringify(newQuoteResponse, null, 2));
+
+      // El backend devuelve directamente la cotización creada
+      const quoteToAdd = newQuoteResponse.data ? newQuoteResponse.data : newQuoteResponse;
+      console.log("✅ COTIZACIÓN A AÑADIR AL ESTADO:", JSON.stringify(quoteToAdd, null, 2));
+
+      if (quoteToAdd && quoteToAdd.id) {
+        setQuotes(prevQuotes => [quoteToAdd, ...prevQuotes]);
+      } else {
+        console.error("El objeto quoteToAdd no es válido o no tiene ID:", quoteToAdd);
+        fetchQuotes(); // Recarga la lista como fallback
+      }
+      return quoteToAdd;
+
+    } catch (error) {
+      console.error("Error detallado en addQuote:", error.message);
+      throw error;
+    }
+  }, [user, fetchQuotes]);
+
+  const updateQuote = useCallback(async (quoteId, quoteDataToUpdate) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (COTIZACIONES):", JSON.stringify({ quoteId, ...quoteDataToUpdate }, null, 2));
+
+      const response = await fetch(`http://localhost:3001/api/quotes/${quoteId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(quoteDataToUpdate)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE COTIZACIONES):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo al actualizar. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const updatedQuoteResponse = await response.json();
+      console.log("✅ COTIZACIÓN ACTUALIZADA - RESPUESTA DEL BACKEND:", JSON.stringify(updatedQuoteResponse, null, 2));
+
+      const quoteToUpdateInState = updatedQuoteResponse.data ? updatedQuoteResponse.data : updatedQuoteResponse;
+      console.log("✅ COTIZACIÓN A ACTUALIZAR EN EL ESTADO:", JSON.stringify(quoteToUpdateInState, null, 2));
+
+      if (quoteToUpdateInState && quoteToUpdateInState.id) {
+        setQuotes(prevQuotes =>
+          prevQuotes.map(q => (q.id === quoteId ? quoteToUpdateInState : q))
+        );
+      } else {
+        console.error("El objeto quoteToUpdateInState no es válido o no tiene ID:", quoteToUpdateInState);
+        fetchQuotes(); // Recarga como fallback
+      }
+      return quoteToUpdateInState;
+
+    } catch (error) {
+      console.error("Error detallado en updateQuote:", error.message);
+      throw error;
+    }
+  }, [user, fetchQuotes]);
+
+  const deleteQuote = useCallback(async (quoteId) => {
+    if (!user?.token) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/quotes/${quoteId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar la cotización.');
+      }
+      console.log("✅ COTIZACIÓN ELIMINADA CON ID:", quoteId);
+      setQuotes(prev => prev.filter(q => q.id !== quoteId));
+    } catch (error) {
+      console.error("Error en deleteQuote:", error);
+      throw error;
+    }
+  }, [user]);
+
+  const approveQuote = useCallback(async (quoteId, notes = '') => {
+    if (!user?.token) return;
+    try {
+      console.log(">>> Aprobando cotización:", quoteId, "con notas:", notes);
+      
+      const response = await fetch(`http://localhost:3001/api/quotes/${quoteId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ notes })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al aprobar cotización');
+      }
+
+      const updatedQuoteResponse = await response.json();
+      console.log("✅ COTIZACIÓN APROBADA - RESPUESTA DEL BACKEND:", JSON.stringify(updatedQuoteResponse, null, 2));
+      
+      // Actualizar estado local
+      const quoteToUpdate = updatedQuoteResponse.data ? updatedQuoteResponse.data : updatedQuoteResponse;
+      setQuotes(prevQuotes =>
+        prevQuotes.map(q => 
+          q.id === quoteId ? quoteToUpdate : q
+        )
+      );
+      
+      return updatedQuoteResponse;
+    } catch (error) {
+      console.error("Error en approveQuote:", error);
+      throw error;
+    }
+  }, [user]);
+
+  const rejectQuote = useCallback(async (quoteId, notes = '') => {
+    if (!user?.token) return;
+    try {
+      console.log(">>> Rechazando cotización:", quoteId, "con notas:", notes);
+      
+      const response = await fetch(`http://localhost:3001/api/quotes/${quoteId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ notes })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al rechazar cotización');
+      }
+
+      const updatedQuoteResponse = await response.json();
+      console.log("✅ COTIZACIÓN RECHAZADA - RESPUESTA DEL BACKEND:", JSON.stringify(updatedQuoteResponse, null, 2));
+      
+      // Actualizar estado local
+      const quoteToUpdate = updatedQuoteResponse.data ? updatedQuoteResponse.data : updatedQuoteResponse;
+      setQuotes(prevQuotes =>
+        prevQuotes.map(q => 
+          q.id === quoteId ? quoteToUpdate : q
+        )
+      );
+      
+      return updatedQuoteResponse;
+    } catch (error) {
+      console.error("Error en rejectQuote:", error);
+      throw error;
+    }
+  }, [user]);
+
+  // 5.3. FUNCIONES CRUD PARA SERVICIOS
+  const addService = useCallback(async (serviceData) => {
+    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API (SERVICIOS):', serviceData);
+    if (!user?.token) return;
+    try {
+      console.log(">>>>> DATOS ENVIADOS AL BACKEND (SERVICIOS):", JSON.stringify(serviceData, null, 2));
+
+      const response = await fetch('http://localhost:3001/api/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(serviceData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (SERVICIOS):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo en la operación. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const newServiceResponse = await response.json();
+      console.log("✅ SERVICIO CREADO - RESPUESTA DEL BACKEND:", JSON.stringify(newServiceResponse, null, 2));
+
+      // El backend devuelve directamente el servicio creado
+      const serviceToAdd = newServiceResponse.data ? newServiceResponse.data : newServiceResponse;
+      console.log("✅ SERVICIO A AÑADIR AL ESTADO:", JSON.stringify(serviceToAdd, null, 2));
+
+      if (serviceToAdd && serviceToAdd.id) {
+        setServices(prevServices => [serviceToAdd, ...prevServices]);
+      } else {
+        console.error("El objeto serviceToAdd no es válido o no tiene ID:", serviceToAdd);
+        fetchServices(); // Recarga la lista como fallback
+      }
+      return serviceToAdd;
+
+    } catch (error) {
+      console.error("Error detallado en addService:", error.message);
+      throw error;
+    }
+  }, [user, fetchServices]);
+
+  const updateService = useCallback(async (serviceId, serviceDataToUpdate) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (SERVICIOS):", JSON.stringify({ serviceId, ...serviceDataToUpdate }, null, 2));
+
+      const response = await fetch(`http://localhost:3001/api/services/${serviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(serviceDataToUpdate)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE SERVICIOS):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo al actualizar. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const updatedServiceResponse = await response.json();
+      console.log("✅ SERVICIO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
+
+      const serviceToUpdateInState = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
+      console.log("✅ SERVICIO A ACTUALIZAR EN EL ESTADO:", JSON.stringify(serviceToUpdateInState, null, 2));
+
+      if (serviceToUpdateInState && serviceToUpdateInState.id) {
+        setServices(prevServices =>
+          prevServices.map(s => (s.id === serviceId ? serviceToUpdateInState : s))
+        );
+      } else {
+        console.error("El objeto serviceToUpdateInState no es válido o no tiene ID:", serviceToUpdateInState);
+        fetchServices(); // Recarga como fallback
+      }
+      return serviceToUpdateInState;
+
+    } catch (error) {
+      console.error("Error detallado en updateService:", error.message);
+      throw error;
+    }
+  }, [user, fetchServices]);
+
+  const deleteService = useCallback(async (serviceId) => {
+    if (!user?.token) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/services/${serviceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar el servicio.');
+      }
+      console.log("✅ SERVICIO ELIMINADO CON ID:", serviceId);
+      setServices(prev => prev.filter(s => s.id !== serviceId));
+    } catch (error) {
+      console.error("Error en deleteService:", error);
+      throw error;
+    }
+  }, [user]);
+
+  // Funciones especiales para servicios
+  const assignTechnician = useCallback(async (serviceId, technicianId) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>> Asignando técnico:", technicianId, "al servicio:", serviceId);
+      
+      const response = await fetch(`http://localhost:3001/api/services/${serviceId}/assign`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ technicianId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al asignar técnico');
+      }
+
+      const updatedServiceResponse = await response.json();
+      console.log("✅ TÉCNICO ASIGNADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
+      
+      // Actualizar estado local
+      const serviceToUpdate = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
+      setServices(prevServices =>
+        prevServices.map(s => 
+          s.id === serviceId ? serviceToUpdate : s
+        )
+      );
+      
+      return updatedServiceResponse;
+    } catch (error) {
+      console.error("Error en assignTechnician:", error);
+      throw error;
+    }
+  }, [user]);
+
+  const completeService = useCallback(async (serviceId, completionData) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>> Completando servicio:", serviceId, "con datos:", completionData);
+      
+      const response = await fetch(`http://localhost:3001/api/services/${serviceId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(completionData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al completar servicio');
+      }
+
+      const updatedServiceResponse = await response.json();
+      console.log("✅ SERVICIO COMPLETADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
+      
+      // Actualizar estado local
+      const serviceToUpdate = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
+      setServices(prevServices =>
+        prevServices.map(s => 
+          s.id === serviceId ? serviceToUpdate : s
+        )
+      );
+      
+      return updatedServiceResponse;
+    } catch (error) {
+      console.error("Error en completeService:", error);
+      throw error;
+    }
+  }, [user]);
+
+  const updateServiceStatus = useCallback(async (serviceId, newStatus) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>> Actualizando estado del servicio:", serviceId, "a", newStatus);
+      
+      const response = await fetch(`http://localhost:3001/api/services/${serviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al actualizar estado');
+      }
+
+      const updatedServiceResponse = await response.json();
+      console.log("✅ ESTADO DEL SERVICIO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
+      
+      // Actualizar estado local
+      const serviceToUpdate = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
+      setServices(prevServices =>
+        prevServices.map(s => 
+          s.id === serviceId ? serviceToUpdate : s
+        )
+      );
+      
+      return updatedServiceResponse;
+    } catch (error) {
+      console.error("Error en updateServiceStatus:", error);
+      throw error;
+    }
+  }, [user]);
+
 
   // 6. VALOR DEL CONTEXTO
   const contextValue = useMemo(() => ({
@@ -348,6 +922,7 @@ export const AppProvider = ({ children }) => {
     addClient,
     updateClient,
     deleteClient,
+    updateClientStatus,
     fetchClients, // Exponemos fetchClients si queremos recargar manualmente desde algún componente
     
     // Estados y funciones de técnicos
@@ -357,10 +932,35 @@ export const AppProvider = ({ children }) => {
     addTechnician,
     updateTechnician,
     deleteTechnician,
-    WorkspaceTechnicians // Exponemos WorkspaceTechnicians para recargar manualmente
+    WorkspaceTechnicians, // Exponemos WorkspaceTechnicians para recargar manualmente
+
+    // Estados y funciones de cotizaciones
+    quotes,
+    isLoadingQuotes,
+    errorQuotes,
+    addQuote,
+    updateQuote,
+    deleteQuote,
+    approveQuote,
+    rejectQuote,
+    fetchQuotes, // Exponemos fetchQuotes para recargar manualmente con filtros
+
+    // Estados y funciones de servicios
+    services,
+    isLoadingServices,
+    errorServices,
+    addService,
+    updateService,
+    deleteService,
+    assignTechnician,
+    completeService,
+    updateServiceStatus,
+    fetchServices // Exponemos fetchServices para recargar manualmente con filtros
   }), [
-    clients, isLoadingClients, errorClients, addClient, updateClient, deleteClient, fetchClients,
-    technicians, isLoadingTechnicians, errorTechnicians, addTechnician, updateTechnician, deleteTechnician, WorkspaceTechnicians
+    clients, isLoadingClients, errorClients, addClient, updateClient, deleteClient, updateClientStatus, fetchClients,
+    technicians, isLoadingTechnicians, errorTechnicians, addTechnician, updateTechnician, deleteTechnician, WorkspaceTechnicians,
+    quotes, isLoadingQuotes, errorQuotes, addQuote, updateQuote, deleteQuote, approveQuote, rejectQuote, fetchQuotes,
+    services, isLoadingServices, errorServices, addService, updateService, deleteService, assignTechnician, completeService, updateServiceStatus, fetchServices
   ]);
 
   return (

@@ -2,6 +2,8 @@ import React, { useState, useMemo, useContext } from 'react';
 import { FaPlus, FaSearch, FaEdit, FaTrash, FaEye } from 'react-icons/fa';
 import { AppContext } from '../context/AppContext';
 import { useAuth } from '../hooks/useAuth';
+import StatusToggle from '../components/ui/StatusToggle';
+import { getClientDisplayName, getClientTypeLabel, getClientDocumentNumber } from '../utils/clientUtils';
 
 const Clients = () => {
   const {
@@ -10,7 +12,8 @@ const Clients = () => {
     errorClients,
     addClient,
     updateClient,
-    deleteClient
+    deleteClient,
+    updateClientStatus
   } = useContext(AppContext);
 
   // 2. OBTENEMOS EL USUARIO LOGUEADO (EL ADMIN) DEL AuthContext
@@ -123,13 +126,23 @@ const Clients = () => {
   };
 
   const handleDeleteClient = async (client) => {
-    if (window.confirm(`¿Está seguro de eliminar el cliente ${client.name}?`)) {
+    if (window.confirm(`¿Está seguro de eliminar el cliente ${getClientDisplayName(client)}?`)) {
       try {
         await deleteClient(client.id);
       } catch (error) {
         console.error("Falló al eliminar el cliente:", error);
         alert(error.message || "Error al eliminar cliente.");
       }
+    }
+  };
+
+  const handleToggleClientStatus = async (clientId, newStatus) => {
+    try {
+      await updateClientStatus(clientId, newStatus);
+      console.log(`✅ Cliente ${newStatus ? 'activado' : 'desactivado'} exitosamente`);
+    } catch (error) {
+      console.error("Error al cambiar estado:", error);
+      alert(`Error al cambiar estado: ${error.message}`);
     }
   };
 
@@ -143,14 +156,14 @@ const Clients = () => {
       return [];
     }
     return clients.filter(client => {
-      // Adaptamos las propiedades a las que vienen del backend (ej: client.user.username)
-      const clientName = client.name || client.user?.username || '';
+      // Usar helper functions para obtener datos consistentes
+      const clientName = getClientDisplayName(client);
       const clientEmail = client.email || client.user?.email || '';
-      const clientContact = client.contactPerson || ''; // Ajusta según tu modelo de datos
+      const clientDocument = getClientDocumentNumber(client);
 
       const matchesSearch = clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         clientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        clientContact.toLowerCase().includes(searchTerm.toLowerCase());
+        clientDocument.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter === 'todos' || (client.status && client.status.toLowerCase() === statusFilter.toLowerCase());
 
@@ -231,7 +244,6 @@ const Clients = () => {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 text-left">
-                <th className="px-4 py-3 text-sm font-medium text-gray-600">ID</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Nombre</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Tipo</th>
                 <th className="px-4 py-3 text-sm font-medium text-gray-600">Email</th>
@@ -245,12 +257,11 @@ const Clients = () => {
             <tbody>
               {filteredClients.map((client) => (
                 <tr key={client.id} className="border-t border-gray-200 hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm">#{client.id?.substring(0, 6) || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="font-medium">{client.name || client.user?.username}</div>
-                    <div className="text-gray-500 text-xs">{client.contactPerson || client.ruc || client.dni}</div>
+                    <div className="font-medium">{getClientDisplayName(client)}</div>
+                    <div className="text-gray-500 text-xs">{getClientDocumentNumber(client)}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm capitalize">{client.clientType}</td>
+                  <td className="px-4 py-3 text-sm">{getClientTypeLabel(client)}</td>
                   <td className="px-4 py-3 text-sm">{client.email || client.user?.email}</td>
                   <td className="px-4 py-3 text-sm">{client.phone}</td>
                   <td className="px-4 py-3 text-sm">{client.address}</td>
@@ -264,7 +275,15 @@ const Clients = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      {/* Toggle de estado */}
+                      <StatusToggle
+                        isActive={client.status?.toLowerCase() === 'active'}
+                        onToggle={(newStatus) => handleToggleClientStatus(client.id, newStatus)}
+                        size="sm"
+                      />
+                      
+                      {/* Botones existentes */}
                       <button
                         onClick={() => handleViewClient(client)}
                         className="p-1 text-blue-600 hover:text-blue-800"
@@ -544,9 +563,9 @@ const Clients = () => {
 
                 {/* Lógica mejorada para mostrar el nombre */}
                 {viewingClient.clientType === 'COMPANY' ? (
-                  <div><strong>Razón Social:</strong> {viewingClient.companyName || viewingClient.name}</div>
+                  <div><strong>Razón Social:</strong> {getClientDisplayName(viewingClient)}</div>
                 ) : (
-                  <div><strong>Nombre Completo:</strong> {viewingClient.contactPerson || `${viewingClient.firstName || ''} ${viewingClient.lastName || ''}`.trim() || viewingClient.name}</div>
+                  <div><strong>Nombre Completo:</strong> {getClientDisplayName(viewingClient)}</div>
                 )}
 
                 {viewingClient.clientType === 'COMPANY' && viewingClient.ruc && <div><strong>RUC:</strong> {viewingClient.ruc}</div>}

@@ -1,245 +1,262 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { FaTimes } from 'react-icons/fa';
+import { AppContext } from '../../context/AppContext';
+import { getClientDisplayName } from '../../utils/clientUtils';
 
-const QuoteModal = ({ isOpen, onClose, onSave, clients, technicians, editingQuote }) => {
-  const [formData, setFormData] = useState({
-    client: '',
-    type: 'Programado',
-    equipment: [''],
+const QuoteModal = ({ isOpen, onClose, onSave, editingQuote }) => {
+  const { clients } = useContext(AppContext);
+  const isEditing = !!editingQuote;
+
+  // 1. ESTADO INICIAL COMPLETO
+  const initialState = {
+    title: '',
     description: '',
-    technician: '',
+    clientId: '',
     amount: '',
-  });
+    validUntil: '',
+    notes: '',
+    serviceId: '' // Opcional - para futuro uso
+  };
 
-  // Efecto para cargar datos cuando se edita
-  React.useEffect(() => {
-    if (editingQuote) {
+  const [formData, setFormData] = useState(initialState);
+  const [error, setError] = useState('');
+
+  // 2. EFECTO PARA LLENAR EL FORMULARIO EN MODO EDICIÓN
+  useEffect(() => {
+    if (isEditing && editingQuote) {
       setFormData({
-        client: editingQuote.client || '',
-        type: editingQuote.type || 'Programado',
-        equipment: editingQuote.equipment?.length > 0 ? editingQuote.equipment : [''],
+        title: editingQuote.title || '',
         description: editingQuote.description || '',
-        technician: editingQuote.technician || '',
-        amount: editingQuote.amount?.replace('S/ ', '') || '',
+        clientId: editingQuote.clientId || '',
+        amount: editingQuote.amount || '',
+        validUntil: editingQuote.validUntil ? editingQuote.validUntil.split('T')[0] : '', // Convertir fecha ISO a YYYY-MM-DD
+        notes: editingQuote.notes || '',
+        serviceId: editingQuote.serviceId || ''
       });
     } else {
-      setFormData({
-        client: '',
-        type: 'Programado',
-        equipment: [''],
-        description: '',
-        technician: '',
-        amount: '',
-      });
+      setFormData(initialState);
     }
-  }, [editingQuote, isOpen]);
+  }, [editingQuote, isEditing, isOpen]);
 
-  // Si el modal no está abierto, no renderizar nada
-  if (!isOpen) return null;
-
+  // 3. MANEJADOR DE CAMBIOS GENÉRICO Y CORRECTO
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prevData => ({
+      ...prevData,
       [name]: value,
-    });
+    }));
   };
 
-  const handleAddEquipment = () => {
-    setFormData({
-      ...formData,
-      equipment: [...formData.equipment, ''],
-    });
-  };
-
-  const handleEquipmentChange = (index, value) => {
-    const updatedEquipment = [...formData.equipment];
-    updatedEquipment[index] = value;
-    setFormData({
-      ...formData,
-      equipment: updatedEquipment,
-    });
-  };
-
-  const handleRemoveEquipment = (index) => {
-    const updatedEquipment = formData.equipment.filter((_, i) => i !== index);
-    setFormData({
-      ...formData,
-      equipment: updatedEquipment,
-    });
-  };
-
+  // 4. MANEJADOR DE ENVÍO QUE VALIDA Y PASA LOS DATOS
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError('');
     
-    // Filtrar equipos vacíos
-    const filteredEquipment = formData.equipment.filter(eq => eq.trim() !== '');
-    
-    // Crear objeto de cotización
-    const newQuote = {
-      ...formData,
-      equipment: filteredEquipment,
-      date: editingQuote ? editingQuote.date : new Date().toLocaleDateString('es-ES'),
-      status: editingQuote ? editingQuote.status : 'pendiente',
-      amount: `S/ ${formData.amount}`,
-    };
+    console.log('🔥🔥🔥 1. MODAL: Estado formData completo:', formData);
 
-    if (!editingQuote) {
-      newQuote.id = `COT-${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    // Validaciones básicas
+    if (!formData.title.trim()) {
+      setError('El título es obligatorio.');
+      return;
     }
+    if (!formData.clientId) {
+      setError('Debe seleccionar un cliente.');
+      return;
+    }
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      setError('El monto debe ser mayor a 0.');
+      return;
+    }
+    if (!formData.validUntil) {
+      setError('La fecha de validez es obligatoria.');
+      return;
+    }
+
+    // Validar que la fecha de validez sea futura
+    const validUntilDate = new Date(formData.validUntil);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to compare only dates
     
-    onSave(newQuote);
-    onClose();
+    if (validUntilDate < today) {
+      setError('La fecha de validez debe ser hoy o una fecha futura.');
+      return;
+    }
+
+    if (isEditing) {
+      // Para edición, enviar datos directos sin reestructurar
+      const editPayload = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        amount: parseFloat(formData.amount),
+        validUntil: new Date(formData.validUntil).toISOString(),
+        notes: formData.notes.trim() || undefined,
+      };
+      
+      console.log('🔥🔥🔥 1. MODAL: Payload para EDICIÓN:', editPayload);
+      onSave(editPayload);
+    } else {
+      // Para creación, usar estructura plana que espera el backend
+      const createPayload = {
+        title: formData.title.trim(),
+        description: formData.description.trim() || undefined,
+        clientId: formData.clientId,
+        amount: parseFloat(formData.amount),
+        validUntil: new Date(formData.validUntil).toISOString(),
+        notes: formData.notes.trim() || undefined,
+      };
+
+      // Solo incluir serviceId si tiene valor
+      if (formData.serviceId) {
+        createPayload.serviceId = formData.serviceId;
+      }
+      
+      console.log('🔥🔥🔥 1. MODAL: Payload para CREACIÓN:', createPayload);
+      onSave(createPayload);
+    }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="p-4 border-b border-gray-light flex justify-between items-center">
-          <h3 className="text-xl font-bold">{editingQuote ? 'Editar Cotización' : 'Nueva Cotización'}</h3>
-          <button 
-            className="w-8 h-8 rounded-full hover:bg-secondary flex items-center justify-center"
-            onClick={onClose}
-          >
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 animate-fade-in-up max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">{isEditing ? 'Editar Cotización' : 'Nueva Cotización'}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-2xl">
             <FaTimes />
           </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Cliente */}
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-dark mb-1">Cliente *</label>
-              <select 
-                name="client" 
-                value={formData.client}
-                onChange={handleChange}
-                required
-                className="px-3 py-2 border border-gray-light rounded focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              >
-                <option value="">Seleccionar cliente</option>
-                {clients && clients.map((client) => (
-                  <option key={client.id} value={client.name}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Tipo de servicio */}
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-dark mb-1">Tipo de Servicio *</label>
-              <select 
-                name="type" 
-                value={formData.type}
-                onChange={handleChange}
-                required
-                className="px-3 py-2 border border-gray-light rounded focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              >
-                <option value="Programado">Programado</option>
-                <option value="Correctivo">Correctivo</option>
-              </select>
-            </div>
-            
-            {/* Técnico */}
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-dark mb-1">Técnico *</label>
-              <select 
-                name="technician" 
-                value={formData.technician}
-                onChange={handleChange}
-                required
-                className="px-3 py-2 border border-gray-light rounded focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
-              >
-                <option value="">Seleccionar técnico</option>
-                {technicians && technicians.map((tech) => (
-                  <option key={tech.id} value={tech.name}>
-                    {tech.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            
-            {/* Monto */}
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-dark mb-1">Monto Estimado *</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate 
-                y-1/2">S/</span>
+
+        <form onSubmit={handleSubmit}>
+          {/* INFORMACIÓN BÁSICA */}
+          <fieldset className="border p-4 rounded-md mb-4">
+            <legend className="text-md font-semibold px-2">Información Básica</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Título */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
                 <input 
                   type="text" 
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  required
-                  placeholder="0.00"
-                  className="px-3 py-2 pl-8 border border-gray-light rounded focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 w-full"
+                  name="title" 
+                  value={formData.title} 
+                  onChange={handleChange} 
+                  className="input w-full" 
+                  required 
+                  placeholder="Ej: Cotización mantenimiento preventivo"
                 />
               </div>
-            </div>
-          </div>
-          
-          {/* Equipos */}
-          <div className="mt-6">
-            <label className="text-sm text-gray-dark mb-1">Equipos *</label>
-            {formData.equipment.map((equipment, index) => (
-              <div key={index} className="flex items-center gap-2 mb-2">
-                <input 
-                  type="text" 
-                  value={equipment}
-                  onChange={(e) => handleEquipmentChange(index, e.target.value)}
-                  placeholder="Nombre/modelo del equipo"
+
+              {/* Cliente */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Cliente *</label>
+                <select 
+                  name="clientId" 
+                  value={formData.clientId} 
+                  onChange={handleChange} 
+                  className="input w-full" 
                   required
-                  className="px-3 py-2 border border-gray-light rounded focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 flex-1"
-                />
-                {formData.equipment.length > 1 && (
-                  <button 
-                    type="button"
-                    className="btn btn-danger-light px-2 h-10 min-w-[40px]" 
-                    onClick={() => handleRemoveEquipment(index)}
-                  >
-                    <FaTimes />
-                  </button>
+                  disabled={isEditing} // No permitir cambiar cliente en edición
+                >
+                  <option value="">Seleccionar cliente</option>
+                  {clients.map(client => (
+                    <option key={client.id} value={client.id}>
+                      {getClientDisplayName(client)}
+                    </option>
+                  ))}
+                </select>
+                {isEditing && (
+                  <p className="text-xs text-gray-500 mt-1">No se puede cambiar el cliente en modo edición</p>
                 )}
               </div>
-            ))}
-            <button 
-              type="button" 
-              className="btn btn-secondary mt-2"
-              onClick={handleAddEquipment}
-            >
-              + Agregar otro equipo
-            </button>
-          </div>
-          
-          {/* Descripción */}
-          <div className="mt-6">
-            <label className="text-sm text-gray-dark mb-1">Descripción de la Cotización *</label>
-            <textarea 
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows="4"
-              required
-              placeholder="Describa brevemente los servicios o reparaciones a cotizar..."
-              className="px-3 py-2 border border-gray-light rounded focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10 w-full"
-            ></textarea>
-          </div>
-          
+
+              {/* Monto */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Monto (S/) *</label>
+                <input 
+                  type="number" 
+                  name="amount" 
+                  value={formData.amount} 
+                  onChange={handleChange} 
+                  className="input w-full" 
+                  required 
+                  step="0.01"
+                  min="0.01"
+                  placeholder="0.00"
+                />
+              </div>
+
+              {/* Fecha de Validez */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Válido Hasta *</label>
+                <input 
+                  type="date" 
+                  name="validUntil" 
+                  value={formData.validUntil} 
+                  onChange={handleChange} 
+                  className="input w-full" 
+                  required
+                  min={new Date().toISOString().split('T')[0]} // No permitir fechas pasadas
+                />
+              </div>
+
+              {/* Servicio (Opcional - para futuro) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ID Servicio (Opcional)</label>
+                <input 
+                  type="text" 
+                  name="serviceId" 
+                  value={formData.serviceId} 
+                  onChange={handleChange} 
+                  className="input w-full" 
+                  placeholder="ID del servicio asociado"
+                />
+                <p className="text-xs text-gray-500 mt-1">Solo si está asociada a un servicio específico</p>
+              </div>
+            </div>
+          </fieldset>
+
+          {/* DETALLES */}
+          <fieldset className="border p-4 rounded-md mb-4">
+            <legend className="text-md font-semibold px-2">Detalles</legend>
+            <div className="space-y-4">
+              {/* Descripción */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <textarea 
+                  name="description" 
+                  value={formData.description} 
+                  onChange={handleChange} 
+                  className="input w-full" 
+                  rows="3"
+                  placeholder="Describe el trabajo a realizar, equipos involucrados, etc."
+                />
+              </div>
+
+              {/* Notas */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notas Adicionales</label>
+                <textarea 
+                  name="notes" 
+                  value={formData.notes} 
+                  onChange={handleChange} 
+                  className="input w-full" 
+                  rows="2"
+                  placeholder="Observaciones, condiciones especiales, etc."
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          {/* Mostrar error si existe */}
+          {error && <p className="text-red-500 text-sm mt-4 text-center bg-red-50 p-2 rounded">{error}</p>}
+
           {/* Botones */}
-          <div className="mt-8 flex justify-end gap-3">
-            <button 
-              type="button" 
-              className="btn btn-outline"
-              onClick={onClose}
-            >
+          <div className="flex justify-end gap-4 mt-6">
+            <button type="button" onClick={onClose} className="btn btn-secondary">
               Cancelar
             </button>
-            <button 
-              type="submit" 
-              className="btn btn-primary"
-            >
-              {editingQuote ? 'Actualizar Cotización' : 'Guardar Cotización'}
+            <button type="submit" className="btn btn-primary">
+              {isEditing ? 'Actualizar Cotización' : 'Crear Cotización'}
             </button>
           </div>
         </form>

@@ -15,9 +15,9 @@ const TechnicianModal = ({ isOpen, onClose, onSave, technician }) => {
     phone: '',
     firstName: '',
     lastName: '',
-    rating: '',
+    rating: '5',
     isAvailable: true,
-    averageTime: '',
+    averageTime: '2h 30min',
     servicesCompleted: ''
   });
 
@@ -50,9 +50,9 @@ const TechnicianModal = ({ isOpen, onClose, onSave, technician }) => {
         phone: '',
         firstName: '',
         lastName: '',
-        rating: '',
+        rating: '5',
         isAvailable: true,
-        averageTime: '',
+        averageTime: '2h 30min',
         servicesCompleted: ''
       });
     }
@@ -134,7 +134,7 @@ const TechnicianModal = ({ isOpen, onClose, onSave, technician }) => {
         phone: formData.phone.trim() || null,
         firstName: formData.firstName.trim() || null,
         lastName: formData.lastName.trim() || null,
-        rating: formData.rating ? parseFloat(formData.rating) : 0.0,
+        rating: formData.rating ? parseFloat(formData.rating) : 5.0,
         isAvailable: formData.isAvailable,
         averageTime: formData.averageTime.trim() || null,
         servicesCompleted: formData.servicesCompleted ? parseInt(formData.servicesCompleted) : 0,

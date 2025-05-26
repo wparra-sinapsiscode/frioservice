@@ -54,7 +54,12 @@ const LoginForm = () => {
         console.log(`%cLoginForm: Rol del backend: '${actualUserRole}'. Navegación inminente a: ${redirectPath}`, 'color: green; font-weight: bold;');
         navigate(redirectPath, { replace: true });
       } else {
-        setError(responseData.message || 'Error al iniciar sesión');
+        // Manejo específico de errores para cuentas inactivas
+        if (responseData.message && responseData.message.includes('cuenta se encuentra inactiva')) {
+          setError('Su cuenta se encuentra inactiva. Contacte al administrador para más información.');
+        } else {
+          setError(responseData.message || 'Error al iniciar sesión');
+        }
       }
     } catch (err) {
       setError('No se pudo conectar con el servidor. Intenta más tarde.');

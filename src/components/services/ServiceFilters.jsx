@@ -1,4 +1,5 @@
 import React from 'react';
+import { getClientDisplayName } from '../../utils/clientUtils';
 
 const ServiceFilters = ({ filters, onFilterChange, technicians, clients }) => {
   const handleChange = (e) => {
@@ -65,7 +66,7 @@ const ServiceFilters = ({ filters, onFilterChange, technicians, clients }) => {
           <option value="todos">Todos</option>
           {clients && clients.map((client, index) => (
             <option key={index} value={client.username}>
-              {client.name}
+              {getClientDisplayName(client)}
             </option>
           ))}
         </select>

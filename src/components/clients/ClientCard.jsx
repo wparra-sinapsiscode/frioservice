@@ -1,14 +1,15 @@
 import React from 'react';
 import { FaUser, FaPhone, FaEnvelope, FaBuilding, FaMapMarkerAlt, FaToolbox, FaCalendarAlt } from 'react-icons/fa';
+import { getClientDisplayName, getClientTypeLabel, getClientContactName } from '../../utils/clientUtils';
 
 const ClientCard = ({ client }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
       <div className="bg-primary p-4 text-white">
-        <h3 className="font-bold text-lg">{client.name}</h3>
+        <h3 className="font-bold text-lg">{getClientDisplayName(client)}</h3>
         <div className="flex items-center text-sm opacity-90 mt-1">
           <FaBuilding className="mr-2" />
-          <span>{client.type}</span>
+          <span>{getClientTypeLabel(client)}</span>
         </div>
       </div>
       
@@ -23,7 +24,7 @@ const ClientCard = ({ client }) => {
           {/* Contacto */}
           <div className="flex items-center">
             <FaUser className="text-gray mr-3 min-w-[16px]" />
-            <span>{client.contact}</span>
+            <span>{getClientContactName(client)}</span>
           </div>
           
           {/* Teléfono */}

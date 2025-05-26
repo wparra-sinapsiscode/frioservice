@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes } from 'react-icons/fa';
+import { getClientDisplayName } from '../../utils/clientUtils';
 
 const ServiceModal = ({ onSave, onClose, editingService, clients, technicians }) => {
   const [formData, setFormData] = useState({
@@ -87,8 +88,8 @@ const ServiceModal = ({ onSave, onClose, editingService, clients, technicians })
           >
             <option value="">Seleccionar cliente</option>
             {clients && clients.map((client) => (
-              <option key={client.id} value={client.name}>
-                {client.name}
+              <option key={client.id} value={getClientDisplayName(client)}>
+                {getClientDisplayName(client)}
               </option>
             ))}
           </select>
