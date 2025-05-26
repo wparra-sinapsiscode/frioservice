@@ -1,79 +1,164 @@
-import React, { useState } from 'react';
-import { FiCalendar, FiFilter, FiMapPin, FiTool, FiClock, FiCheckCircle, FiAlertTriangle } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiCalendar, FiFilter, FiMapPin, FiTool, FiClock, FiCheckCircle, FiAlertTriangle, FiLoader } from 'react-icons/fi';
+import { useAuth } from '../hooks/useAuth';
 
 const WorkHistory = () => {
+  const { user } = useAuth();
+  const [workHistory, setWorkHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
   // Estado para los filtros
   const [monthFilter, setMonthFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  
-  // Datos simulados del historial de trabajo
-  const workHistory = [
-    {
-      id: 1,
-      client: 'Supermercados ABC',
-      equipment: 'Refrigerador Industrial',
-      type: 'Mantenimiento',
-      address: 'Av. Principal 123',
-      date: '15/10/2023',
-      time: '09:30 AM - 11:00 AM',
-      issues: 'Sistema de refrigeración funcionando a menor capacidad',
-      solution: 'Limpieza del condensador y recarga de refrigerante',
-      parts: ['Refrigerante R-134a', 'Filtro secador'],
-      status: 'exitoso'
-    },
-    {
-      id: 2,
-      client: 'Restaurante El Sabor',
-      equipment: 'Congelador Vertical',
-      type: 'Reparación',
-      address: 'Calle Comercial 456',
-      date: '10/10/2023',
-      time: '14:00 PM - 16:30 PM',
-      issues: 'No mantiene temperatura adecuada',
-      solution: 'Reemplazo de compresor defectuoso y recarga de refrigerante',
-      parts: ['Compresor 1/2 HP', 'Refrigerante R-404A', 'Válvula de expansión'],
-      status: 'exitoso'
-    },
-    {
-      id: 3,
-      client: 'Panadería Dulce',
-      equipment: 'Cámara Frigorífica',
-      type: 'Mantenimiento',
-      address: 'Av. Central 789',
-      date: '05/10/2023',
-      time: '08:00 AM - 10:00 AM',
-      issues: 'Mantenimiento preventivo programado',
-      solution: 'Limpieza general, ajuste de parámetros y verificación de sistemas',
-      parts: ['Filtro de aire', 'Lubricante'],
-      status: 'exitoso'
-    },
-    {
-      id: 4,
-      client: 'Clínica San Juan',
-      equipment: 'Aire Acondicionado Split',
-      type: 'Reparación',
-      address: 'Calle Salud 234',
-      date: '28/09/2023',
-      time: '11:00 AM - 15:00 PM',
-      issues: 'Ruido excesivo y baja eficiencia',
-      solution: 'Reparación parcial. Se programó segunda visita para cambio de motor del ventilador',
-      parts: ['Capacitor', 'Refrigerante R-410A'],
-      status: 'parcial'
-    },
-    {
-      id: 5,
-      client: 'Hotel Las Palmas',
-      equipment: 'Sistema de Aire Acondicionado',
-      type: 'Instalación',
-      address: 'Av. Turística 567',
-      date: '20/09/2023',
-      time: '09:00 AM - 18:00 PM',
-      issues: 'Instalación de nuevo sistema',
-      solution: 'Instalación completa y configuración del sistema',
-      parts: ['Tubería de cobre', 'Aislamiento térmico', 'Soporte de unidad exterior'],
-      status: 'exitoso'
-    },
-  ];
+
+  // Fetch work history from API
+  useEffect(() => {
+    const fetchWorkHistory = async () => {
+      if (!user?.id || !user?.token) {
+        setError('Usuario no autenticado');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `http://localhost:3001/api/services/technician/${user.id}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('🔥 Work history data:', data);
+
+        if (data.success && data.data) {
+          // Transform API data to component format
+          const transformedData = data.data.map(service => ({
+            id: service.id,
+            client: service.client?.companyName || service.client?.contactPerson || 'Cliente no especificado',
+            equipment: getEquipmentDisplay(service.equipmentIds, service.type),
+            type: getServiceTypeDisplay(service.type),
+            address: service.address,
+            date: service.completedAt ? new Date(service.completedAt).toLocaleDateString('es-ES') : 
+                  service.scheduledDate ? new Date(service.scheduledDate).toLocaleDateString('es-ES') : 'Sin fecha',
+            time: getTimeDisplay(service.scheduledDate, service.completedAt, service.timeSpent),
+            issues: service.description || 'Sin descripción',
+            solution: service.workPerformed || 'Sin detalles de trabajo realizado',
+            parts: getMaterialsUsed(service.materialsUsed),
+            status: getServiceStatus(service.status),
+            priority: service.priority,
+            clientNotes: service.clientNotes,
+            technicianNotes: service.technicianNotes
+          }));
+
+          setWorkHistory(transformedData);
+        } else {
+          throw new Error(data.message || 'Error al obtener historial de trabajos');
+        }
+      } catch (error) {
+        console.error('Error fetching work history:', error);
+        setError('Error al cargar el historial: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWorkHistory();
+  }, [user]);
+
+  // Helper functions
+  const getEquipmentDisplay = (equipmentIds, serviceType) => {
+    if (equipmentIds && equipmentIds.length > 0) {
+      return `Equipo de refrigeración (${equipmentIds.length} unidad${equipmentIds.length > 1 ? 'es' : ''})`;
+    }
+    return getServiceTypeEquipment(serviceType);
+  };
+
+  const getServiceTypeEquipment = (type) => {
+    const equipmentMap = {
+      'MAINTENANCE': 'Equipo de refrigeración',
+      'REPAIR': 'Equipo averiado',
+      'INSTALLATION': 'Nuevo equipo',
+      'INSPECTION': 'Equipo a inspeccionar',
+      'EMERGENCY': 'Equipo de emergencia',
+      'CLEANING': 'Equipo a limpiar',
+      'CONSULTATION': 'Consulta técnica'
+    };
+    return equipmentMap[type] || 'Equipo no especificado';
+  };
+
+  const getServiceTypeDisplay = (type) => {
+    const typeMap = {
+      'MAINTENANCE': 'Mantenimiento',
+      'REPAIR': 'Reparación',
+      'INSTALLATION': 'Instalación',
+      'INSPECTION': 'Inspección',
+      'EMERGENCY': 'Emergencia',
+      'CLEANING': 'Limpieza',
+      'CONSULTATION': 'Consultoría'
+    };
+    return typeMap[type] || type;
+  };
+
+  const getTimeDisplay = (scheduledDate, completedAt, timeSpent) => {
+    const startTime = scheduledDate ? new Date(scheduledDate).toLocaleTimeString('es-ES', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    }) : 'Sin hora';
+    
+    if (timeSpent) {
+      const hours = Math.floor(timeSpent / 60);
+      const minutes = timeSpent % 60;
+      return `${startTime} (${hours}h ${minutes}m)`;
+    }
+    
+    if (completedAt) {
+      const endTime = new Date(completedAt).toLocaleTimeString('es-ES', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      return `${startTime} - ${endTime}`;
+    }
+    
+    return startTime;
+  };
+
+  const getMaterialsUsed = (materialsUsed) => {
+    if (!materialsUsed) return ['Sin materiales registrados'];
+    
+    if (typeof materialsUsed === 'string') {
+      try {
+        const parsed = JSON.parse(materialsUsed);
+        return Array.isArray(parsed) ? parsed : [materialsUsed];
+      } catch {
+        return [materialsUsed];
+      }
+    }
+    
+    if (Array.isArray(materialsUsed)) {
+      return materialsUsed.length > 0 ? materialsUsed : ['Sin materiales registrados'];
+    }
+    
+    return ['Sin materiales registrados'];
+  };
+
+  const getServiceStatus = (status) => {
+    if (status === 'COMPLETED') return 'exitoso';
+    if (status === 'IN_PROGRESS') return 'parcial';
+    return 'pendiente';
+  };
 
   // Filtrar historial por mes y tipo
   const filteredHistory = workHistory.filter(item => {
@@ -82,7 +167,7 @@ const WorkHistory = () => {
 
     if (monthFilter) {
       const [day, month, year] = item.date.split('/');
-      passMonthFilter = month === monthFilter;
+      passMonthFilter = month === monthFilter.padStart(2, '0');
     }
 
     if (typeFilter) {
@@ -94,6 +179,42 @@ const WorkHistory = () => {
 
   // Extraer tipos únicos para el filtro
   const uniqueTypes = [...new Set(workHistory.map(item => item.type))];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Historial de Trabajos</h1>
+        <div className="flex justify-center items-center py-12">
+          <div className="text-center">
+            <FiLoader className="animate-spin text-4xl text-primary mx-auto mb-4" />
+            <p className="text-gray-600">Cargando historial de trabajos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Historial de Trabajos</h1>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 mb-4">
+            <p className="font-semibold">Error al cargar historial</p>
+            <p className="text-sm mt-2">{error}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -116,15 +237,15 @@ const WorkHistory = () => {
               onChange={(e) => setMonthFilter(e.target.value)}
             >
               <option value="">Todos los meses</option>
-              <option value="01">Enero</option>
-              <option value="02">Febrero</option>
-              <option value="03">Marzo</option>
-              <option value="04">Abril</option>
-              <option value="05">Mayo</option>
-              <option value="06">Junio</option>
-              <option value="07">Julio</option>
-              <option value="08">Agosto</option>
-              <option value="09">Septiembre</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
               <option value="10">Octubre</option>
               <option value="11">Noviembre</option>
               <option value="12">Diciembre</option>
@@ -153,7 +274,18 @@ const WorkHistory = () => {
         <h2 className="text-xl font-semibold mb-4">Servicios Realizados ({filteredHistory.length})</h2>
         
         {filteredHistory.length === 0 ? (
-          <p className="text-gray-500 text-center py-6">No hay registros con los filtros seleccionados</p>
+          <div className="text-center py-12">
+            <FiTool className="text-6xl text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+              {workHistory.length === 0 ? 'No hay servicios completados' : 'No hay registros con los filtros seleccionados'}
+            </h3>
+            <p className="text-gray-500">
+              {workHistory.length === 0 
+                ? 'Una vez que completes servicios, aparecerán en tu historial.'
+                : 'Prueba ajustando los filtros para ver más resultados.'
+              }
+            </p>
+          </div>
         ) : (
           <div className="space-y-8">
             {filteredHistory.map(work => (
@@ -166,11 +298,17 @@ const WorkHistory = () => {
                   <div className="flex items-center">
                     {work.status === 'exitoso' ? (
                       <FiCheckCircle className="text-success mr-2" />
-                    ) : (
+                    ) : work.status === 'parcial' ? (
                       <FiAlertTriangle className="text-warning mr-2" />
+                    ) : (
+                      <FiClock className="text-info mr-2" />
                     )}
-                    <span className={`text-sm font-medium ${work.status === 'exitoso' ? 'text-success' : 'text-warning'}`}>
-                      {work.status === 'exitoso' ? 'Servicio Exitoso' : 'Servicio Parcial'}
+                    <span className={`text-sm font-medium ${
+                      work.status === 'exitoso' ? 'text-success' : 
+                      work.status === 'parcial' ? 'text-warning' : 'text-info'
+                    }`}>
+                      {work.status === 'exitoso' ? 'Completado' : 
+                       work.status === 'parcial' ? 'En Progreso' : 'Pendiente'}
                     </span>
                   </div>
                 </div>
@@ -215,16 +353,28 @@ const WorkHistory = () => {
                     <h4 className="font-semibold mb-2">Detalles del Servicio</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-gray-dark font-medium">Problema</p>
+                        <p className="text-sm text-gray-dark font-medium">Descripción</p>
                         <p className="text-gray-700 mb-2">{work.issues}</p>
+                        {work.clientNotes && (
+                          <>
+                            <p className="text-sm text-gray-dark font-medium">Notas del Cliente</p>
+                            <p className="text-gray-700 mb-2">{work.clientNotes}</p>
+                          </>
+                        )}
                       </div>
                       <div>
-                        <p className="text-sm text-gray-dark font-medium">Solución</p>
+                        <p className="text-sm text-gray-dark font-medium">Trabajo Realizado</p>
                         <p className="text-gray-700 mb-2">{work.solution}</p>
+                        {work.technicianNotes && (
+                          <>
+                            <p className="text-sm text-gray-dark font-medium">Notas del Técnico</p>
+                            <p className="text-gray-700 mb-2">{work.technicianNotes}</p>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-dark font-medium">Refacciones utilizadas</p>
+                      <p className="text-sm text-gray-dark font-medium">Materiales utilizados</p>
                       <div className="flex flex-wrap gap-2 mt-1">
                         {work.parts.map((part, index) => (
                           <span key={index} className="bg-secondary px-2 py-1 rounded text-sm">

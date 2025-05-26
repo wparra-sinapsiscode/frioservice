@@ -18,11 +18,13 @@ import {
   FiArrowRight
 } from 'react-icons/fi';
 import ServiceDetailModal from '../components/services/ServiceDetailModal';
+import ScheduledServicesModal from '../components/services/ScheduledServicesModal';
 
 const ClientDashboard = () => {
   const navigate = useNavigate();
   const [selectedService, setSelectedService] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isScheduledServicesModalOpen, setIsScheduledServicesModalOpen] = useState(false);
   const { user } = useAuth();
   const { 
     equipment, 
@@ -119,7 +121,7 @@ const ClientDashboard = () => {
         type: 'success',
         title: 'Servicios programados',
         message: `${upcoming.length} servicio(s) programados esta semana`,
-        action: () => navigate('/cliente/mis-servicios')
+        action: () => setIsScheduledServicesModalOpen(true)
       });
     }
 
@@ -264,12 +266,14 @@ const ClientDashboard = () => {
           type="quotes"
           trend={stats.quotes.pending > 0 ? { positive: true, text: 'Requieren aprobación' } : null}
         />
-        <StatsCard 
-          title="Servicios Programados" 
-          value={stats.services.scheduled}
-          type="pending"
-          trend={stats.services.upcoming > 0 ? { positive: true, text: `${stats.services.upcoming} esta semana` } : null}
-        />
+        <div onClick={() => setIsScheduledServicesModalOpen(true)} className="cursor-pointer">
+          <StatsCard 
+            title="Servicios Programados" 
+            value={stats.services.scheduled}
+            type="pending"
+            trend={stats.services.upcoming > 0 ? { positive: true, text: `${stats.services.upcoming} esta semana` } : null}
+          />
+        </div>
         <StatsCard 
           title="Equipos Registrados" 
           value={stats.equipment.total}
@@ -365,7 +369,7 @@ const ClientDashboard = () => {
               Próximos Servicios
             </h2>
             <button 
-              onClick={() => navigate('/cliente/mis-servicios')}
+              onClick={() => setIsScheduledServicesModalOpen(true)}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
             >
               Ver todos <FiArrowRight size={14} />
@@ -531,6 +535,13 @@ const ClientDashboard = () => {
         service={selectedService}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+      />
+
+      {/* Modal de Servicios Programados */}
+      <ScheduledServicesModal 
+        isOpen={isScheduledServicesModalOpen}
+        onClose={() => setIsScheduledServicesModalOpen(false)}
+        clientId={user?.id}
       />
     </div>
   );

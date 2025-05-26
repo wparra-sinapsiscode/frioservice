@@ -1,58 +1,64 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiStar, FiUser, FiCalendar, FiMessageSquare } from 'react-icons/fi';
+import { useAuth } from '../hooks/useAuth';
 
 const MyEvaluations = () => {
-  // Datos simulados de evaluaciones
-  const evaluations = [
-    {
-      id: 1,
-      clientName: 'Supermercados ABC',
-      date: '15/10/2023',
-      rating: 5,
-      comment: 'Excelente servicio, el técnico fue muy profesional y solucionó el problema rápidamente. Además dejó todo limpio y ordenado.',
-      serviceType: 'Mantenimiento',
-      equipment: 'Refrigerador Industrial'
-    },
-    {
-      id: 2,
-      clientName: 'Restaurante El Sabor',
-      date: '10/10/2023',
-      rating: 4,
-      comment: 'Buen servicio, aunque tardó un poco más de lo esperado. El equipo funciona perfectamente ahora.',
-      serviceType: 'Reparación',
-      equipment: 'Congelador Vertical'
-    },
-    {
-      id: 3,
-      clientName: 'Panadería Dulce',
-      date: '05/10/2023',
-      rating: 5,
-      comment: 'Servicio impecable. El técnico fue puntual y resolvió el problema con mucha eficiencia.',
-      serviceType: 'Mantenimiento',
-      equipment: 'Cámara Frigorífica'
-    },
-    {
-      id: 4,
-      clientName: 'Clínica San Juan',
-      date: '28/09/2023',
-      rating: 3,
-      comment: 'El servicio fue aceptable, pero hubo que programar una segunda visita para terminar la reparación.',
-      serviceType: 'Reparación',
-      equipment: 'Aire Acondicionado Split'
-    },
-    {
-      id: 5,
-      clientName: 'Hotel Las Palmas',
-      date: '20/09/2023',
-      rating: 5,
-      comment: 'Muy satisfechos con la instalación. El técnico nos explicó detalladamente cómo usar el sistema y fue muy amable.',
-      serviceType: 'Instalación',
-      equipment: 'Sistema de Aire Acondicionado'
-    },
-  ];
+  const { user } = useAuth();
+  const [evaluations, setEvaluations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch evaluations from API
+  useEffect(() => {
+    const fetchEvaluations = async () => {
+      if (!user?.id || !user?.token) {
+        setError('Usuario no autenticado');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(
+          `http://localhost:3001/api/services/technician/${user.id}/evaluations`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('🔥 Evaluations data:', data);
+
+        if (data.success && data.data) {
+          setEvaluations(data.data);
+        } else {
+          throw new Error(data.message || 'Error al obtener evaluaciones');
+        }
+      } catch (error) {
+        console.error('Error fetching evaluations:', error);
+        setError('Error al cargar las evaluaciones: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvaluations();
+  }, [user]);
 
   // Cálculo del promedio de calificaciones
-  const averageRating = evaluations.reduce((acc, curr) => acc + curr.rating, 0) / evaluations.length;
+  const averageRating = evaluations.length > 0 
+    ? evaluations.reduce((acc, curr) => acc + curr.rating, 0) / evaluations.length 
+    : 0;
 
   // Renderizado de estrellas basado en la calificación
   const renderStars = (rating) => {
@@ -67,6 +73,42 @@ const MyEvaluations = () => {
     }
     return stars;
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Mis Evaluaciones</h1>
+        <div className="flex justify-center items-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Cargando evaluaciones...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Mis Evaluaciones</h1>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 mb-4">
+            <p className="font-semibold">Error al cargar evaluaciones</p>
+            <p className="text-sm mt-2">{error}</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -113,8 +155,17 @@ const MyEvaluations = () => {
       <div className="bg-white rounded shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Comentarios de Clientes</h2>
         
-        <div className="space-y-6">
-          {evaluations.map(evaluation => (
+        {evaluations.length === 0 ? (
+          <div className="text-center py-12">
+            <FiStar className="text-6xl text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay evaluaciones aún</h3>
+            <p className="text-gray-500">
+              Una vez que completes servicios y los clientes te evalúen, aparecerán aquí.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {evaluations.map(evaluation => (
             <div key={evaluation.id} className="border-b pb-6 last:border-b-0 last:pb-0">
               <div className="flex justify-between items-start mb-3">
                 <div>
@@ -145,8 +196,9 @@ const MyEvaluations = () => {
                 <p className="text-gray-700">{evaluation.comment}</p>
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
