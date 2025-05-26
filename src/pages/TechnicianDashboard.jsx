@@ -78,16 +78,10 @@ const TechnicianDashboard = () => {
     try {
       console.log('🔥 Obteniendo servicios para técnico ID:', technicianProfile.id);
       
-      // Usar fetchServices del contexto con el ID del técnico
-      const servicesData = await fetchServices({ technicianId: technicianProfile.id });
+      // fetchServices actualiza el estado global 'services', no retorna los datos
+      await fetchServices({ technicianId: technicianProfile.id });
       
-      if (servicesData && Array.isArray(servicesData)) {
-        setTechnicianServices(servicesData);
-        console.log('🔥 Servicios del técnico obtenidos:', servicesData);
-      } else {
-        console.log('🔥 No se obtuvieron servicios o formato incorrecto');
-        setTechnicianServices([]);
-      }
+      console.log('🔥 fetchServices completado, servicios serán procesados en useEffect');
     } catch (error) {
       console.error('🔥 Error al obtener servicios del técnico:', error);
       setTechnicianError('Error al cargar los servicios del técnico');
@@ -125,6 +119,23 @@ const TechnicianDashboard = () => {
       getTechnicianServices();
     }
   }, [technicianProfile, getTechnicianServices]);
+
+  // useEffect para procesar servicios del estado global cuando cambien
+  useEffect(() => {
+    if (services && Array.isArray(services) && technicianProfile?.id) {
+      console.log('🔥 Procesando servicios del estado global:', services.length, 'servicios');
+      console.log('🔥 Filtrando para técnico ID:', technicianProfile.id);
+      
+      // Filtrar servicios que pertenecen al técnico actual
+      const filteredServices = services.filter(service => {
+        console.log('🔥 Servicio ID:', service.id, '- TechnicianId:', service.technicianId, '- Coincide:', service.technicianId === technicianProfile.id);
+        return service.technicianId === technicianProfile.id;
+      });
+      
+      console.log('🔥 Servicios filtrados para el técnico:', filteredServices.length);
+      setTechnicianServices(filteredServices);
+    }
+  }, [services, technicianProfile]);
 
   // Calcular estadísticas del técnico basadas en sus servicios
   const technicianStats = useMemo(() => {
