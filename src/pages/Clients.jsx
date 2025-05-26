@@ -1,20 +1,20 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { FaPlus, FaSearch, FaEdit, FaTrash, FaEye } from 'react-icons/fa';
 import { AppContext } from '../context/AppContext';
-import { useAuth } from '../hooks/useAuth'; // 1. AÑADIMOS LA IMPORTACIÓN DE useAuth
+import { useAuth } from '../hooks/useAuth';
 
 const Clients = () => {
-  const { 
-    clients, 
-    isLoadingClients, 
-    errorClients, 
-    addClient, 
-    updateClient, 
-    deleteClient 
+  const {
+    clients,
+    isLoadingClients,
+    errorClients,
+    addClient,
+    updateClient,
+    deleteClient
   } = useContext(AppContext);
-  
+
   // 2. OBTENEMOS EL USUARIO LOGUEADO (EL ADMIN) DEL AuthContext
-  const { user } = useAuth(); 
+  const { user } = useAuth();
 
   // --- ESTADOS LOCALES PARA LA UI (SIN CAMBIOS) ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,85 +43,85 @@ const Clients = () => {
   const handleEditClient = (client) => {
     setEditingClient(client);
     // Asegúrate que 'client.clientType' sea la propiedad correcta si viene del backend
-    setClientType(client.clientType || client.type || 'empresa'); 
+    setClientType(client.clientType || client.type || 'empresa');
     setShowModal(true);
   };
 
   // --- FUNCIÓN DE GUARDADO CORREGIDA ---
-// En Clients.jsx
+  // En Clients.jsx
 
-const handleSaveClient = async (e) => {
-  e.preventDefault();
+  const handleSaveClient = async (e) => {
+    e.preventDefault();
 
-  if (!user || !user.id) {
-    alert("Error de sesión: No se pudo obtener el ID del usuario. Por favor, inicie sesión de nuevo.");
-    console.error("Intento de guardar cliente sin user.id:", user);
-    return;
-  }
+    if (!user || !user.id) {
+      alert("Error de sesión: No se pudo obtener el ID del usuario. Por favor, inicie sesión de nuevo.");
+      console.error("Intento de guardar cliente sin user.id:", user);
+      return;
+    }
 
-  const formData = new FormData(e.target);
-  
-  let backendApiCompatibleClientType;
-  if (clientType === 'empresa') {
-    backendApiCompatibleClientType = 'COMPANY';
-  } else if (clientType === 'personal') {
-    backendApiCompatibleClientType = 'PERSONAL';
-  } else {
-    alert("Tipo de cliente no reconocido. Por favor, seleccione uno válido.");
-    return;
-  }
+    const formData = new FormData(e.target);
 
-  // Objeto base con campos comunes
-  const clientDataFromForm = {
-    clientType: backendApiCompatibleClientType,
-    userId: user.id,        
-    email: formData.get('email'),
-    phone: formData.get('phone'),
-    address: formData.get('address'),
-    city: formData.get('city'),
-    district: formData.get('district'),
-    username: formData.get('username'),
-    password: formData.get('password'),
-  };
-  
-  // Si la contraseña está vacía y no estamos editando, la eliminamos o validamos
-  if (!editingClient && !clientDataFromForm.password) {
+    let backendApiCompatibleClientType;
+    if (clientType === 'empresa') {
+      backendApiCompatibleClientType = 'COMPANY';
+    } else if (clientType === 'personal') {
+      backendApiCompatibleClientType = 'PERSONAL';
+    } else {
+      alert("Tipo de cliente no reconocido. Por favor, seleccione uno válido.");
+      return;
+    }
+
+    // Objeto base con campos comunes
+    const clientDataFromForm = {
+      clientType: backendApiCompatibleClientType,
+      userId: user.id,
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+      address: formData.get('address'),
+      city: formData.get('city'),
+      district: formData.get('district'),
+      username: formData.get('username'),
+      password: formData.get('password'),
+    };
+
+    // Si la contraseña está vacía y no estamos editando, la eliminamos o validamos
+    if (!editingClient && !clientDataFromForm.password) {
       alert("La contraseña es requerida para nuevos clientes.");
       return;
-  }
-  if (editingClient && !clientDataFromForm.password) {
-      delete clientDataFromForm.password; 
-  }
-
-  // --- ¡AQUÍ ESTÁ EL CAMBIO CLAVE PARA LOS NOMBRES! ---
-  if (clientType === 'empresa') {
-    // Asumimos que el backend espera 'companyName' para el nombre de la empresa.
-    // 'name' es el atributo del input de "Razón Social" en tu formulario.
-    clientDataFromForm.companyName = formData.get('name'); 
-    clientDataFromForm.ruc = formData.get('ruc');
-    clientDataFromForm.sector = formData.get('sector');
-  } else { // personal
-    // Asumimos que el backend espera 'firstName' y 'lastName' para personas.
-    // 'name' es el atributo del input de "Nombres" en tu formulario.
-    clientDataFromForm.firstName = formData.get('name'); 
-    clientDataFromForm.lastName = formData.get('lastname');
-    clientDataFromForm.dni = formData.get('dni');
-  }
-  
-  try {
-    if (editingClient) {
-      // Ajusta esto si el update también necesita companyName/firstName/lastName
-      await updateClient(editingClient.id, clientDataFromForm);
-    } else {
-      await addClient(clientDataFromForm);
     }
-    handleCloseModal();
-  } catch (error) {
-    console.error("Falló al guardar el cliente:", error);
-    alert(error.message); 
-  }
-};
-  
+    if (editingClient && !clientDataFromForm.password) {
+      delete clientDataFromForm.password;
+    }
+
+    // --- ¡AQUÍ ESTÁ EL CAMBIO CLAVE PARA LOS NOMBRES! ---
+    if (clientType === 'empresa') {
+      // Asumimos que el backend espera 'companyName' para el nombre de la empresa.
+      // 'name' es el atributo del input de "Razón Social" en tu formulario.
+      clientDataFromForm.companyName = formData.get('name');
+      clientDataFromForm.ruc = formData.get('ruc');
+      clientDataFromForm.sector = formData.get('sector');
+    } else { // personal
+      // Asumimos que el backend espera 'firstName' y 'lastName' para personas.
+      // 'name' es el atributo del input de "Nombres" en tu formulario.
+      clientDataFromForm.firstName = formData.get('name');
+      clientDataFromForm.lastName = formData.get('lastname');
+      clientDataFromForm.dni = formData.get('dni');
+    }
+
+    try {
+      if (editingClient) {
+        // Ajusta esto si el update también necesita companyName/firstName/lastName
+        await updateClient(editingClient.id, clientDataFromForm);
+      } else {
+        await addClient(clientDataFromForm);
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error("Falló al guardar el cliente:", error);
+      alert(error.message);
+    }
+  };
+
   const handleDeleteClient = async (client) => {
     if (window.confirm(`¿Está seguro de eliminar el cliente ${client.name}?`)) {
       try {
@@ -149,18 +149,18 @@ const handleSaveClient = async (e) => {
       const clientContact = client.contactPerson || ''; // Ajusta según tu modelo de datos
 
       const matchesSearch = clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           clientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           clientContact.toLowerCase().includes(searchTerm.toLowerCase());
-      
+        clientEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        clientContact.toLowerCase().includes(searchTerm.toLowerCase());
+
       const matchesStatus = statusFilter === 'todos' || (client.status && client.status.toLowerCase() === statusFilter.toLowerCase());
-      
+
       // Usamos client.clientType porque así lo espera el backend y así lo guardaremos
       const matchesType = typeFilter === 'todos' || (client.clientType && client.clientType.toLowerCase() === typeFilter.toLowerCase());
-      
+
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [clients, searchTerm, statusFilter, typeFilter]);
-  
+
   if (isLoadingClients) {
     return <div className="text-center p-8">Cargando clientes...</div>;
   }
@@ -176,7 +176,7 @@ const handleSaveClient = async (e) => {
           <h2 className="text-2xl font-bold m-0">Gestión de Clientes</h2>
         </div>
         <div className="flex gap-3">
-          <button 
+          <button
             className="btn btn-primary flex items-center gap-2"
             onClick={handleNewClient}
           >
@@ -184,7 +184,7 @@ const handleSaveClient = async (e) => {
           </button>
         </div>
       </div>
-      
+
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
         <div className="flex-grow">
           <div className="relative">
@@ -198,10 +198,10 @@ const handleSaveClient = async (e) => {
             />
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <label>Estado:</label>
-          <select 
+          <select
             className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -211,10 +211,10 @@ const handleSaveClient = async (e) => {
             <option value="inactivo">Inactivo</option>
           </select>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <label>Tipo:</label>
-          <select 
+          <select
             className="border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-primary"
             value={typeFilter} // Este es el estado local para el filtro de la tabla
             onChange={(e) => setTypeFilter(e.target.value)} // Actualiza el filtro de la tabla
@@ -225,7 +225,7 @@ const handleSaveClient = async (e) => {
           </select>
         </div>
       </div>
-      
+
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -256,33 +256,32 @@ const handleSaveClient = async (e) => {
                   <td className="px-4 py-3 text-sm">{client.address}</td>
                   {/* <td className="px-4 py-3 text-sm">{client.totalServices || client._count?.services}</td> */}
                   <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 text-xs rounded-full capitalize ${
-                      client.status?.toLowerCase() === 'active' || client.status?.toLowerCase() === 'activo'
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs rounded-full capitalize ${client.status?.toLowerCase() === 'active' || client.status?.toLowerCase() === 'activo'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                      }`}>
                       {client.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex gap-2">
-                      <button 
+                      <button
                         onClick={() => handleViewClient(client)}
-                        className="p-1 text-blue-600 hover:text-blue-800" 
+                        className="p-1 text-blue-600 hover:text-blue-800"
                         title="Ver detalles"
                       >
                         <FaEye />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleEditClient(client)}
-                        className="p-1 text-green-600 hover:text-green-800" 
+                        className="p-1 text-green-600 hover:text-green-800"
                         title="Editar"
                       >
                         <FaEdit />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteClient(client)}
-                        className="p-1 text-red-600 hover:text-red-800" 
+                        className="p-1 text-red-600 hover:text-red-800"
                         title="Eliminar"
                       >
                         <FaTrash />
@@ -294,7 +293,7 @@ const handleSaveClient = async (e) => {
             </tbody>
           </table>
         </div>
-        
+
         <div className="flex justify-between items-center px-4 py-3 border-t border-gray-200">
           <div className="text-sm text-gray-500">
             Mostrando {filteredClients.length} de {clients.length} clientes
@@ -302,7 +301,7 @@ const handleSaveClient = async (e) => {
           {/* Aquí podrías implementar una paginación real más adelante */}
         </div>
       </div>
-      
+
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -312,7 +311,7 @@ const handleSaveClient = async (e) => {
                 <span className="text-2xl">&times;</span>
               </button>
             </div>
-            
+
             <div className="p-6">
               <form onSubmit={handleSaveClient}>
                 <div className="mb-4">
@@ -342,7 +341,7 @@ const handleSaveClient = async (e) => {
                     </label>
                   </div>
                 </div>
-                
+
                 {clientType === 'empresa' ? (
                   <>
                     <div className="mb-4">
@@ -370,8 +369,8 @@ const handleSaveClient = async (e) => {
                       </div>
                       <div>
                         <label className="block mb-2 text-sm font-medium">Sector:</label>
-                        <select 
-                          name="sector" 
+                        <select
+                          name="sector"
                           defaultValue={editingClient?.sector || ''}
                           className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary"
                         >
@@ -422,7 +421,7 @@ const handleSaveClient = async (e) => {
                     </div>
                   </>
                 )}
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block mb-2 text-sm font-medium">Email (para login y contacto):</label>
@@ -445,7 +444,7 @@ const handleSaveClient = async (e) => {
                     />
                   </div>
                 </div>
-                
+
                 <div className="mb-4">
                   <label className="block mb-2 text-sm font-medium">Dirección:</label>
                   <input
@@ -456,7 +455,7 @@ const handleSaveClient = async (e) => {
                     required
                   />
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block mb-2 text-sm font-medium">Ciudad:</label>
@@ -479,7 +478,7 @@ const handleSaveClient = async (e) => {
                     />
                   </div>
                 </div>
-                
+
                 <h4 className="text-md font-semibold mt-6 mb-2">Datos de Acceso para el Cliente</h4>
                 <div className="mb-4">
                   <label className="block mb-2 text-sm font-medium">Nombre de Usuario (para login):</label>
@@ -491,7 +490,7 @@ const handleSaveClient = async (e) => {
                     required
                   />
                 </div>
-                
+
                 <div className="mb-4">
                   <label className="block mb-2 text-sm font-medium">Contraseña (para login):</label>
                   <input
@@ -503,7 +502,7 @@ const handleSaveClient = async (e) => {
                     minLength={!editingClient ? 6 : undefined}
                   />
                 </div>
-                
+
                 <div className="flex justify-end gap-3 mt-6">
                   <button
                     type="button"
@@ -530,8 +529,8 @@ const handleSaveClient = async (e) => {
           <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center border-b px-6 py-4 sticky top-0 bg-white z-10">
               <h3 className="text-xl font-semibold">Detalles de Cliente</h3>
-              <button 
-                onClick={() => setViewingClient(null)} 
+              <button
+                onClick={() => setViewingClient(null)}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <span className="text-2xl">&times;</span>
@@ -539,36 +538,54 @@ const handleSaveClient = async (e) => {
             </div>
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div><strong>ID Cliente:</strong> #{viewingClient.id?.substring(0,8)}</div>
-                <div><strong>ID Usuario:</strong> #{viewingClient.userId?.substring(0,8)}</div>
-                <hr className="md:col-span-2 my-2"/>
-                <div><strong>Nombre/Razón Social:</strong> {viewingClient.name}</div>
-                {viewingClient.clientType === 'EMPRESA' && viewingClient.ruc && <div><strong>RUC:</strong> {viewingClient.ruc}</div>}
+                <div><strong>ID Cliente:</strong> #{viewingClient.id?.substring(0, 8)}</div>
+                <div><strong>ID Usuario:</strong> #{viewingClient.userId?.substring(0, 8)}</div>
+                <hr className="md:col-span-2 my-2" />
+
+                {/* Lógica mejorada para mostrar el nombre */}
+                {viewingClient.clientType === 'COMPANY' ? (
+                  <div><strong>Razón Social:</strong> {viewingClient.companyName || viewingClient.name}</div>
+                ) : (
+                  <div><strong>Nombre Completo:</strong> {viewingClient.contactPerson || `${viewingClient.firstName || ''} ${viewingClient.lastName || ''}`.trim() || viewingClient.name}</div>
+                )}
+
+                {viewingClient.clientType === 'COMPANY' && viewingClient.ruc && <div><strong>RUC:</strong> {viewingClient.ruc}</div>}
+                {viewingClient.clientType === 'COMPANY' && viewingClient.businessRegistration && !viewingClient.ruc && <div><strong>Reg. Negocio:</strong> {viewingClient.businessRegistration}</div>}
+
                 {viewingClient.clientType === 'PERSONAL' && viewingClient.dni && <div><strong>DNI:</strong> {viewingClient.dni}</div>}
-                {viewingClient.clientType === 'PERSONAL' && viewingClient.lastname && <div><strong>Apellidos:</strong> {viewingClient.lastname}</div>}
+                {viewingClient.clientType === 'PERSONAL' && viewingClient.businessRegistration && !viewingClient.dni && <div><strong>Reg. Negocio:</strong> {viewingClient.businessRegistration}</div>}
+
+                {viewingClient.clientType === 'COMPANY' && viewingClient.contactPerson && <div><strong>Persona de Contacto (Empresa):</strong> {viewingClient.contactPerson}</div>}
+
+
                 <div><strong>Tipo:</strong> <span className="capitalize">{viewingClient.clientType?.toLowerCase()}</span></div>
-                <div><strong>Email:</strong> {viewingClient.email || viewingClient.user?.email}</div>
+                <div><strong>Email (Contacto Perfil):</strong> {viewingClient.email}</div>
                 <div><strong>Teléfono:</strong> {viewingClient.phone}</div>
                 <div><strong>Dirección:</strong> {viewingClient.address}</div>
                 <div><strong>Ciudad:</strong> {viewingClient.city}</div>
                 <div><strong>Distrito:</strong> {viewingClient.district}</div>
                 <div><strong>Sector:</strong> {viewingClient.sector}</div>
-                <hr className="md:col-span-2 my-2"/>
+                <hr className="md:col-span-2 my-2" />
                 <div><strong>Usuario (login):</strong> {viewingClient.user?.username}</div>
-                <div><strong>Estado:</strong> 
-                  <span className={`ml-2 px-2 py-1 text-xs rounded-full capitalize ${
-                    viewingClient.status?.toLowerCase() === 'active' || viewingClient.status?.toLowerCase() === 'activo'
-                      ? 'bg-green-100 text-green-800' 
+                <div><strong>Email (login):</strong> {viewingClient.user?.email}</div>
+                <div><strong>Estado Usuario (login):</strong> {viewingClient.user?.isActive ? 'Activo' : 'Inactivo'}</div>
+                <div><strong>Rol Usuario (login):</strong> <span className="capitalize">{viewingClient.user?.role?.toLowerCase()}</span></div>
+
+                <hr className="md:col-span-2 my-2" />
+                <div><strong>Estado Perfil Cliente:</strong>
+                  <span className={`ml-2 px-2 py-1 text-xs rounded-full capitalize ${viewingClient.status?.toLowerCase() === 'active' || viewingClient.status?.toLowerCase() === 'activo'
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                  }`}>
+                    }`}>
                     {viewingClient.status?.toLowerCase()}
                   </span>
                 </div>
-                <div><strong>Total Servicios:</strong> {viewingClient.totalServices || client._count?.services || 0}</div>
-                {/* <div><strong>Próximo Servicio:</strong> {viewingClient.nextServiceDate ? new Date(viewingClient.nextServiceDate).toLocaleDateString() : 'No programado'}</div> */}
+                <div><strong>Total Servicios:</strong> {viewingClient.totalServices || viewingClient._count?.services || 0}</div>
+                <div><strong>Total Equipos:</strong> {viewingClient._count?.equipment || 0}</div>
+                <div><strong>Total Cotizaciones:</strong> {viewingClient._count?.quotes || 0}</div>
               </div>
               <div className="flex justify-end mt-6">
-                <button 
+                <button
                   onClick={() => setViewingClient(null)}
                   className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
                 >
