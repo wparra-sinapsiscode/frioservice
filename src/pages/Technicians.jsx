@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
-import { FaPlus, FaUsers, FaCheckCircle, FaClock } from 'react-icons/fa';
+import React, { useState, useContext } from 'react';
+import { FaPlus, FaUsers, FaCheckCircle, FaClock, FaSpinner } from 'react-icons/fa';
 import TechnicianCard from '../components/technicians/TechnicianCard';
 import TechnicianModal from '../components/technicians/TechnicianModal';
 import StatsCard from '../components/dashboard/StatsCard';
-import { technicianData } from '../utils/mockData';
+import { AppContext } from '../context/AppContext';
 
 const Technicians = () => {
-  const [technicians, setTechnicians] = useState(technicianData);
+  // =============== ACCESO AL CONTEXTO ===============
+  const { 
+    technicians, 
+    isLoadingTechnicians, 
+    errorTechnicians,
+    addTechnician,
+    updateTechnician,
+    deleteTechnician,
+    WorkspaceTechnicians
+  } = useContext(AppContext);
+
+  // =============== ESTADO LOCAL ===============
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTechnician, setEditingTechnician] = useState(null);
   const [viewingTechnician, setViewingTechnician] = useState(null);
@@ -21,13 +32,24 @@ const Technicians = () => {
     setEditingTechnician(null);
   };
 
-  const handleSaveTechnician = (technicianData) => {
-    if (editingTechnician) {
-      setTechnicians(technicians.map(tech => 
-        tech.id === editingTechnician.id ? { ...technicianData, id: editingTechnician.id } : tech
-      ));
-    } else {
-      setTechnicians([...technicians, { ...technicianData, id: Date.now() }]);
+  const handleSaveTechnician = async (technicianData) => {
+    console.log('🔥🔥🔥 2. PÁGINA: Datos recibidos del modal:', technicianData);
+    try {
+      if (editingTechnician) {
+        // ACTUALIZAR TÉCNICO EXISTENTE
+        console.log(">>> [TECHNICIANS PAGE] Actualizando técnico:", editingTechnician.id, technicianData);
+        await updateTechnician(editingTechnician.id, technicianData);
+        console.log("✅ [TECHNICIANS PAGE] Técnico actualizado exitosamente");
+      } else {
+        // CREAR NUEVO TÉCNICO
+        console.log(">>> [TECHNICIANS PAGE] Creando nuevo técnico:", technicianData);
+        await addTechnician(technicianData);
+        console.log("✅ [TECHNICIANS PAGE] Técnico creado exitosamente");
+      }
+      handleCloseModal();
+    } catch (error) {
+      console.error("### [TECHNICIANS PAGE] Error al guardar técnico:", error);
+      alert(`Error al guardar técnico: ${error.message}`);
     }
   };
 
@@ -40,9 +62,19 @@ const Technicians = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteTechnician = (technician) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar a ${technician.name}?`)) {
-      setTechnicians(technicians.filter(tech => tech.id !== technician.id));
+  const handleDeleteTechnician = async (technician) => {
+    // Determinar el nombre para mostrar en el confirm
+    const technicianName = technician.user?.username || technician.name || 'este técnico';
+    
+    if (window.confirm(`¿Estás seguro de que quieres eliminar a ${technicianName}?\n\nEsta acción eliminará:\n- El perfil del técnico\n- Su usuario asociado\n- NO se puede deshacer`)) {
+      try {
+        console.log(">>> [TECHNICIANS PAGE] Eliminando técnico:", technician.id);
+        await deleteTechnician(technician.id);
+        console.log("✅ [TECHNICIANS PAGE] Técnico eliminado exitosamente");
+      } catch (error) {
+        console.error("### [TECHNICIANS PAGE] Error al eliminar técnico:", error);
+        alert(`Error al eliminar técnico: ${error.message}`);
+      }
     }
   };
 
@@ -66,42 +98,81 @@ const Technicians = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
         <StatsCard 
           title="Total Técnicos" 
-          value={technicians.length.toString()} 
+          value={isLoadingTechnicians ? "..." : technicians.length.toString()} 
           type="pending" 
           icon={<FaUsers className="text-2xl text-white" />}
         />
         <StatsCard 
-          title="Servicios Completados" 
-          value="124" 
+          title="Disponibles" 
+          value={isLoadingTechnicians ? "..." : technicians.filter(t => t.isAvailable).length.toString()} 
           type="completed" 
           icon={<FaCheckCircle className="text-2xl text-white" />}
         />
         <StatsCard 
-          title="Tiempo Promedio" 
-          value="2.5h" 
+          title="Servicios Totales" 
+          value={isLoadingTechnicians ? "..." : technicians.reduce((sum, t) => sum + (t.servicesCompleted || 0), 0).toString()} 
           type="quotes" 
           icon={<FaClock className="text-2xl text-white" />}
         />
       </div>
       
-      {/* Técnicos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {technicians.map((technician, index) => (
-          <TechnicianCard 
-            key={technician.id || index} 
-            technician={technician}
-            onView={handleViewTechnician}
-            onEdit={handleEditTechnician}
-            onDelete={handleDeleteTechnician}
-          />
-        ))}
-        
-        {technicians.length === 0 && (
-          <div className="col-span-full text-center py-8 text-gray">
-            No hay técnicos registrados
+      {/* =============== RENDERIZACIÓN CONDICIONAL =============== */}
+      
+      {/* ESTADO DE CARGA */}
+      {isLoadingTechnicians && (
+        <div className="flex justify-center items-center py-12">
+          <div className="text-center">
+            <FaSpinner className="animate-spin text-4xl text-primary mx-auto mb-4" />
+            <p className="text-gray-600">Cargando técnicos...</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* ESTADO DE ERROR */}
+      {!isLoadingTechnicians && errorTechnicians && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 mb-4">
+            <p className="font-semibold">Error al cargar técnicos</p>
+            <p className="text-sm mt-2">{errorTechnicians}</p>
+          </div>
+          <button 
+            onClick={WorkspaceTechnicians}
+            className="btn btn-primary"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {/* CONTENIDO PRINCIPAL - TÉCNICOS */}
+      {!isLoadingTechnicians && !errorTechnicians && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {technicians.map((technician, index) => (
+            <TechnicianCard 
+              key={technician.id || index} 
+              technician={technician}
+              onView={handleViewTechnician}
+              onEdit={handleEditTechnician}
+              onDelete={handleDeleteTechnician}
+            />
+          ))}
+          
+          {/* MENSAJE CUANDO NO HAY TÉCNICOS */}
+          {technicians.length === 0 && (
+            <div className="col-span-full text-center py-12">
+              <FaUsers className="text-6xl text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">No hay técnicos registrados</h3>
+              <p className="text-gray-500 mb-6">Comienza agregando tu primer técnico al sistema</p>
+              <button 
+                className="btn btn-primary"
+                onClick={handleNewTechnician}
+              >
+                <FaPlus className="mr-2" /> Agregar Primer Técnico
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modal para nuevo/editar técnico */}
       <TechnicianModal 
@@ -126,26 +197,43 @@ const Technicians = () => {
             </div>
             <div className="space-y-3">
               <div className="text-center">
-                <img 
-                  src={viewingTechnician.avatar} 
-                  alt={viewingTechnician.name}
-                  className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
-                />
-                <h4 className="font-semibold text-lg">{viewingTechnician.name}</h4>
+                {/* Avatar placeholder ya que el backend no maneja imágenes aún */}
+                <div className="w-20 h-20 rounded-full mx-auto mb-3 bg-primary/10 flex items-center justify-center">
+                  <FaUsers className="text-2xl text-primary" />
+                </div>
+                <h4 className="font-semibold text-lg">
+                  {viewingTechnician.user?.username || viewingTechnician.name || 'Técnico'}
+                </h4>
                 <p className="text-gray-600">{viewingTechnician.specialty}</p>
+                <p className="text-sm text-gray-500">{viewingTechnician.user?.email}</p>
+                {viewingTechnician.phone && (
+                  <p className="text-sm text-gray-500">{viewingTechnician.phone}</p>
+                )}
               </div>
               <div className="grid grid-cols-3 gap-4 text-center border-t pt-3">
                 <div>
-                  <p className="font-semibold text-lg">{viewingTechnician.servicesCompleted}</p>
+                  <p className="font-semibold text-lg">{viewingTechnician.servicesCompleted || 0}</p>
                   <p className="text-sm text-gray-600">Servicios</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-lg">{viewingTechnician.averageTime}</p>
+                  <p className="font-semibold text-lg">{viewingTechnician.averageTime || 'N/A'}</p>
                   <p className="text-sm text-gray-600">Tiempo Prom.</p>
                 </div>
                 <div>
-                  <p className="font-semibold text-lg">{viewingTechnician.rating}</p>
+                  <p className="font-semibold text-lg">{viewingTechnician.rating || '0.0'} ⭐</p>
                   <p className="text-sm text-gray-600">Calificación</p>
+                </div>
+              </div>
+              <div className="border-t pt-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Experiencia:</span>
+                  <span className="font-medium">{viewingTechnician.experienceYears || 0} años</span>
+                </div>
+                <div className="flex justify-between text-sm mt-2">
+                  <span className="text-gray-600">Estado:</span>
+                  <span className={`font-medium ${viewingTechnician.isAvailable ? 'text-green-600' : 'text-red-600'}`}>
+                    {viewingTechnician.isAvailable ? 'Disponible' : 'No disponible'}
+                  </span>
                 </div>
               </div>
             </div>

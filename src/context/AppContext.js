@@ -13,6 +13,11 @@ export const AppProvider = ({ children }) => {
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [errorClients, setErrorClients] = useState(null);
 
+  // 3.1. ESTADOS PARA TÉCNICOS
+  const [technicians, setTechnicians] = useState([]);
+  const [isLoadingTechnicians, setIsLoadingTechnicians] = useState(true);
+  const [errorTechnicians, setErrorTechnicians] = useState(null);
+
   // 4. EFECTO PARA CARGAR CLIENTES DESDE LA API
   const fetchClients = useCallback(async () => { // Hacemos fetchClients accesible
     if (user?.token) {
@@ -44,6 +49,42 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     fetchClients(); // Llama a fetchClients
   }, [fetchClients]); // useEffect ahora depende de la función fetchClients
+
+  // 4.1. EFECTO PARA CARGAR TÉCNICOS DESDE LA API
+  const WorkspaceTechnicians = useCallback(async () => {
+    if (user?.token) {
+      setIsLoadingTechnicians(true);
+      setErrorTechnicians(null);
+      try {
+        const response = await fetch('http://localhost:3001/api/technicians', {
+          headers: {
+            'Authorization': `Bearer ${user.token}`
+          }
+        });
+        if (!response.ok) {
+          throw new Error('No se pudo obtener la lista de técnicos.');
+        }
+        const responseData = await response.json();
+        console.log(">>> RESPUESTA COMPLETA DE TÉCNICOS:", JSON.stringify(responseData, null, 2));
+        // Extraer técnicos basándose en la estructura del backend (igual que clientes)
+        const techniciansArray = Array.isArray(responseData.data) ? responseData.data : [];
+        console.log(">>> TÉCNICOS EXTRAÍDOS:", techniciansArray.length, "técnicos encontrados");
+        setTechnicians(techniciansArray);
+      } catch (err) {
+        console.error("Error en WorkspaceTechnicians:", err);
+        setErrorTechnicians(err.message);
+      } finally {
+        setIsLoadingTechnicians(false);
+      }
+    } else {
+      setTechnicians([]); // Limpia los técnicos si no hay token/usuario
+      setIsLoadingTechnicians(false);
+    }
+  }, [user]); // WorkspaceTechnicians depende de user
+
+  useEffect(() => {
+    WorkspaceTechnicians(); // Llama a WorkspaceTechnicians
+  }, [WorkspaceTechnicians]); // useEffect ahora depende de la función WorkspaceTechnicians
 
 
   // 5. FUNCIONES CRUD PARA CLIENTES
@@ -175,18 +216,151 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
+  // 5.1. FUNCIONES CRUD PARA TÉCNICOS
+  const addTechnician = useCallback(async (technicianData) => {
+    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API:', technicianData);
+    if (!user?.token) return;
+    try {
+      console.log(">>>>> DATOS ENVIADOS AL BACKEND (TÉCNICOS):", JSON.stringify(technicianData, null, 2));
+
+      const response = await fetch('http://localhost:3001/api/technicians', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(technicianData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (TÉCNICOS):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo en la operación. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const newTechnicianResponse = await response.json();
+      console.log("✅ TÉCNICO CREADO - RESPUESTA DEL BACKEND:", JSON.stringify(newTechnicianResponse, null, 2));
+
+      // El backend devuelve directamente el técnico creado
+      const technicianToAdd = newTechnicianResponse.data ? newTechnicianResponse.data : newTechnicianResponse;
+      console.log("✅ TÉCNICO A AÑADIR AL ESTADO:", JSON.stringify(technicianToAdd, null, 2));
+
+      if (technicianToAdd && technicianToAdd.id) {
+        setTechnicians(prevTechnicians => [technicianToAdd, ...prevTechnicians]);
+      } else {
+        console.error("El objeto technicianToAdd no es válido o no tiene ID:", technicianToAdd);
+        WorkspaceTechnicians(); // Recarga la lista como fallback
+      }
+      return technicianToAdd;
+
+    } catch (error) {
+      console.error("Error detallado en addTechnician:", error.message);
+      throw error;
+    }
+  }, [user, WorkspaceTechnicians]);
+
+  const updateTechnician = useCallback(async (technicianId, technicianDataToUpdate) => {
+    if (!user?.token) return;
+    try {
+      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (TÉCNICOS):", JSON.stringify({ technicianId, ...technicianDataToUpdate }, null, 2));
+
+      const response = await fetch(`http://localhost:3001/api/technicians/${technicianId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
+        },
+        body: JSON.stringify(technicianDataToUpdate)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE TÉCNICOS):", errorData);
+        let detailedErrorMessage = 'El servidor no especificó el error.';
+        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+          detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
+        } else if (errorData.message) {
+          detailedErrorMessage = errorData.message;
+        } else if (errorData.error) {
+          detailedErrorMessage = `Error: ${errorData.error}`;
+        }
+        throw new Error(`Fallo al actualizar. El servidor dice:\n${detailedErrorMessage}`);
+      }
+
+      const updatedTechnicianResponse = await response.json();
+      console.log("✅ TÉCNICO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedTechnicianResponse, null, 2));
+
+      const technicianToUpdateInState = updatedTechnicianResponse.data ? updatedTechnicianResponse.data : updatedTechnicianResponse;
+      console.log("✅ TÉCNICO A ACTUALIZAR EN EL ESTADO:", JSON.stringify(technicianToUpdateInState, null, 2));
+
+      if (technicianToUpdateInState && technicianToUpdateInState.id) {
+        setTechnicians(prevTechnicians =>
+          prevTechnicians.map(t => (t.id === technicianId ? technicianToUpdateInState : t))
+        );
+      } else {
+        console.error("El objeto technicianToUpdateInState no es válido o no tiene ID:", technicianToUpdateInState);
+        WorkspaceTechnicians(); // Recarga como fallback
+      }
+      return technicianToUpdateInState;
+
+    } catch (error) {
+      console.error("Error detallado en updateTechnician:", error.message);
+      throw error;
+    }
+  }, [user, WorkspaceTechnicians]);
+
+  const deleteTechnician = useCallback(async (technicianId) => {
+    if (!user?.token) return;
+    try {
+      const response = await fetch(`http://localhost:3001/api/technicians/${technicianId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al eliminar el técnico.');
+      }
+      console.log("✅ TÉCNICO ELIMINADO CON ID:", technicianId);
+      setTechnicians(prev => prev.filter(t => t.id !== technicianId));
+    } catch (error) {
+      console.error("Error en deleteTechnician:", error);
+      throw error;
+    }
+  }, [user]);
+
 
   // 6. VALOR DEL CONTEXTO
   const contextValue = useMemo(() => ({
+    // Estados y funciones de clientes
     clients,
     isLoadingClients,
     errorClients,
     addClient,
     updateClient,
     deleteClient,
-    fetchClients // Exponemos fetchClients si queremos recargar manualmente desde algún componente
+    fetchClients, // Exponemos fetchClients si queremos recargar manualmente desde algún componente
+    
+    // Estados y funciones de técnicos
+    technicians,
+    isLoadingTechnicians,
+    errorTechnicians,
+    addTechnician,
+    updateTechnician,
+    deleteTechnician,
+    WorkspaceTechnicians // Exponemos WorkspaceTechnicians para recargar manualmente
   }), [
-    clients, isLoadingClients, errorClients, addClient, updateClient, deleteClient, fetchClients
+    clients, isLoadingClients, errorClients, addClient, updateClient, deleteClient, fetchClients,
+    technicians, isLoadingTechnicians, errorTechnicians, addTechnician, updateTechnician, deleteTechnician, WorkspaceTechnicians
   ]);
 
   return (
