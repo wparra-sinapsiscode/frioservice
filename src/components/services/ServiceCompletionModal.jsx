@@ -140,9 +140,8 @@ const ServiceCompletionModal = ({
       return;
     }
 
-    // Preparar datos para el backend
+    // Preparar datos para el backend (serviceId NO se incluye en el payload)
     const completionData = {
-      serviceId: service.id,
       workPerformed: formData.workPerformed.trim(),
       timeSpent: parseInt(formData.timeSpent),
       materialsUsed: formData.materialsUsed,

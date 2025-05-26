@@ -159,12 +159,13 @@ const MyServices = () => {
   // Función para procesar la finalización del servicio
   const handleServiceCompletion = async (completionData) => {
     console.log('🔥 MyServices - Procesando finalización de servicio:', completionData);
+    console.log('🔥 MyServices - ID del servicio seleccionado:', completingServiceId);
     
     setIsCompletingInProgress(true);
     
     try {
-      // Llamar a la función completeService del contexto
-      await completeService(completionData.serviceId, completionData);
+      // Llamar a la función completeService del contexto (serviceId viene de completingServiceId)
+      await completeService(completingServiceId, completionData);
       
       console.log('🔥 MyServices - Servicio completado exitosamente');
       

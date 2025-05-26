@@ -147,17 +147,30 @@ const Dashboard = () => {
           <ServicesList 
             title="Servicios Próximos" 
             services={services?.filter(service => 
-              service.status === 'PENDING' || service.status === 'SCHEDULED'
-            ).slice(0, 5).map(service => ({
+              // Mostrar TODOS los servicios EXCEPTO COMPLETED
+              service.status !== 'COMPLETED'
+            )
+            // Ordenar por fecha más próxima primero
+            .sort((a, b) => {
+              const dateA = new Date(a.scheduledDate);
+              const dateB = new Date(b.scheduledDate);
+              return dateA - dateB;
+            })
+            .slice(0, 5)
+            .map(service => ({
               title: service.title,
-              details: service.client?.companyName || 'Cliente no especificado',
+              details: `${service.client?.companyName || 'Cliente no especificado'} | ${service.technician?.name || service.technician?.firstName + ' ' + service.technician?.lastName || 'Sin técnico'} | ${service.status}`,
               time: service.scheduledDate 
                 ? new Date(service.scheduledDate).toLocaleDateString('es-ES', {
                     day: '2-digit',
                     month: '2-digit',
-                    year: 'numeric'
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
                   })
-                : 'Sin fecha'
+                : 'Sin fecha',
+              status: service.status,
+              priority: service.priority
             })) || []} 
             viewAllLink="/servicios" 
           />

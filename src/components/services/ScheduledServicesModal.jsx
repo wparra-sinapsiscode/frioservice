@@ -3,91 +3,64 @@ import {
   FiClock, FiMapPin, FiPhone, FiUser, FiTool, FiCalendar, 
   FiX, FiRefreshCw, FiCheckCircle, FiAlertCircle, FiXCircle 
 } from 'react-icons/fi';
+import { useAuth } from '../../hooks/useAuth';
+import { useApp } from '../../hooks/useApp';
 
 const ScheduledServicesModal = ({ isOpen, onClose, clientId }) => {
-  const [services, setServices] = useState([]);
+  const [filteredServices, setFilteredServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [debugInfo, setDebugInfo] = useState('');
+  const { user } = useAuth();
+  const { services, fetchServices, isLoadingServices } = useApp();
 
 
   useEffect(() => {
     if (isOpen) {
-      fetchServices();
+      loadServices();
     }
-  }, [isOpen, clientId]);
+  }, [isOpen]);
 
-  const fetchServices = async () => {
-    console.log('========== INICIO DEBUG SERVICIOS ==========');
-    console.log('1️⃣ Modal isOpen:', isOpen);
-    console.log('2️⃣ ClientId prop recibido:', clientId);
-    console.log('3️⃣ Token presente:', !!localStorage.getItem('token'));
-    console.log('4️⃣ Token value:', localStorage.getItem('token')?.substring(0, 20) + '...');
+  const loadServices = async () => {
+    console.log('========== INICIO DEBUG SERVICIOS (MÉTODO CORREGIDO) ==========');
+    console.log('1️⃣ Usuario actual:', user);
+    console.log('2️⃣ User token disponible:', !!user?.token);
+    console.log('3️⃣ Services desde contexto:', services?.length || 0);
+    console.log('4️⃣ isLoadingServices:', isLoadingServices);
     
     let debugMessages = [];
     setLoading(true);
     
     try {
-      const url = `http://localhost:3001/api/services/client/${clientId}`;
-      console.log('5️⃣ URL completa:', url);
-      debugMessages.push(`URL: ${url}`);
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      console.log('6️⃣ Response Status:', response.status);
-      console.log('7️⃣ Response StatusText:', response.statusText);
-      console.log('8️⃣ Response OK:', response.ok);
-      debugMessages.push(`Status: ${response.status} ${response.statusText}`);
-      
-      // Leer el cuerpo de la respuesta como texto primero
-      const responseText = await response.text();
-      console.log('9️⃣ Response RAW Text:', responseText);
-      debugMessages.push(`Response length: ${responseText.length} chars`);
-      
-      if (!response.ok) {
-        debugMessages.push(`❌ Error: ${response.status} - ${responseText}`);
-        throw new Error(`Error ${response.status}: ${response.statusText} - ${responseText}`);
-      }
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-        console.log('🔟 Data parseada exitosamente:', data);
-      } catch (parseError) {
-        console.error('❌ Error parseando JSON:', parseError);
-        debugMessages.push(`❌ JSON Parse Error: ${parseError.message}`);
-        throw new Error(`Respuesta no es JSON válido: ${parseError.message}`);
+      // Si no tenemos servicios en el contexto, intentar cargarlos
+      if (!services || services.length === 0) {
+        console.log('5️⃣ Cargando servicios desde contexto...');
+        debugMessages.push('Cargando servicios desde contexto...');
+        await fetchServices();
       }
       
-      console.log('1️⃣1️⃣ Tipo de data:', typeof data);
-      console.log('1️⃣2️⃣ Es array:', Array.isArray(data));
-      console.log('1️⃣3️⃣ Keys de data:', Object.keys(data || {}));
-      debugMessages.push(`Data type: ${typeof data}, isArray: ${Array.isArray(data)}`);
+      console.log('6️⃣ Servicios disponibles en contexto:', services?.length || 0);
+      debugMessages.push(`Servicios en contexto: ${services?.length || 0}`);
       
-      // Intentar diferentes estructuras de respuesta
-      const services = data?.services || data?.data || data?.items || data || [];
-      console.log('1️⃣4️⃣ Servicios extraídos:', services);
-      console.log('1️⃣5️⃣ Total servicios encontrados:', Array.isArray(services) ? services.length : 'No es array');
-      debugMessages.push(`Services found: ${Array.isArray(services) ? services.length : 'No es array'}`);
+      // Filtrar servicios programados (no completados, no cancelados)
+      const programmedServices = (services || []).filter(service => 
+        ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(service.status)
+      );
       
-      if (Array.isArray(services) && services.length > 0) {
-        console.log('1️⃣6️⃣ Primer servicio:', services[0]);
-        debugMessages.push(`Sample service ID: ${services[0]?.id || 'No ID'}`);
+      console.log('7️⃣ Servicios programados filtrados:', programmedServices.length);
+      debugMessages.push(`Servicios programados: ${programmedServices.length}`);
+      
+      if (programmedServices.length > 0) {
+        console.log('8️⃣ Primer servicio programado:', programmedServices[0]);
+        debugMessages.push(`Sample service: ${programmedServices[0]?.id || 'No ID'}`);
       }
       
-      setServices(Array.isArray(services) ? services : []);
+      setFilteredServices(programmedServices);
       setDebugInfo(debugMessages.join('\n'));
       
     } catch (error) {
-      console.error('❌ ERROR COMPLETO:', error);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error stack:', error.stack);
+      console.error('❌ ERROR:', error);
       debugMessages.push(`❌ Error: ${error.message}`);
-      setServices([]);
+      setFilteredServices([]);
       setDebugInfo(debugMessages.join('\n'));
     } finally {
       setLoading(false);
@@ -232,7 +205,7 @@ const ScheduledServicesModal = ({ isOpen, onClose, clientId }) => {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={fetchServices}
+                onClick={loadServices}
                 disabled={loading}
                 className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
               >
@@ -256,7 +229,7 @@ const ScheduledServicesModal = ({ isOpen, onClose, clientId }) => {
               <div className="animate-spin h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
               <p className="text-gray-600">Cargando servicios programados...</p>
             </div>
-          ) : services.length === 0 ? (
+          ) : filteredServices.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <FiCalendar className="mx-auto mb-3" size={48} />
               <h3 className="text-lg font-semibold mb-2">No hay servicios programados</h3>
@@ -278,7 +251,7 @@ const ScheduledServicesModal = ({ isOpen, onClose, clientId }) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {services.map((service) => (
+              {filteredServices.map((service) => (
                 <div
                   key={service.id}
                   className={`border-l-4 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow ${getPriorityBorder(service.priority)}`}
@@ -386,13 +359,13 @@ const ScheduledServicesModal = ({ isOpen, onClose, clientId }) => {
         </div>
 
         {/* Footer Summary */}
-        {!loading && services.length > 0 && (
+        {!loading && filteredServices.length > 0 && (
           <div className="border-t bg-gray-50 p-4">
             <div className="flex justify-between items-center text-sm text-gray-600">
-              <span>Total de servicios programados: <strong>{services.length}</strong></span>
+              <span>Total de servicios programados: <strong>{filteredServices.length}</strong></span>
               <span>
                 Próximos 7 días: <strong>
-                  {services.filter(s => {
+                  {filteredServices.filter(s => {
                     const serviceDate = new Date(s.scheduledDate);
                     const now = new Date();
                     const sevenDays = new Date(now.getTime() + (7 * 24 * 60 * 60 * 1000));
@@ -405,7 +378,7 @@ const ScheduledServicesModal = ({ isOpen, onClose, clientId }) => {
         )}
 
         {/* Debug Footer - Siempre visible cuando hay debugInfo */}
-        {!loading && debugInfo && services.length === 0 && (
+        {!loading && debugInfo && filteredServices.length === 0 && (
           <div className="border-t bg-red-50 p-4">
             <div className="text-xs text-red-700">
               <strong>Debug Mode Activo</strong> - Revisa la consola del navegador para logs detallados

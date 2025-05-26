@@ -68,41 +68,31 @@ const TechnicianDashboard = () => {
     }
   }, [user]);
 
-  // Función para obtener servicios del técnico
+  // Función para obtener servicios del técnico usando fetchServices del contexto
   const getTechnicianServices = useCallback(async () => {
-    if (!user?.id || !user?.token) {
-      console.log('🔥 No hay usuario o token disponible para obtener servicios');
+    if (!technicianProfile?.id) {
+      console.log('🔥 No hay perfil de técnico disponible para obtener servicios');
       return;
     }
 
     try {
-      console.log('🔥 Obteniendo servicios para técnico ID:', user.id);
+      console.log('🔥 Obteniendo servicios para técnico ID:', technicianProfile.id);
       
-      const response = await fetch(`http://localhost:3001/api/services/technician/${user.id}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${user.token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const responseData = await response.json();
-      console.log('🔥 Respuesta de servicios del técnico:', responseData);
-
-      if (responseData.success && responseData.data) {
-        setTechnicianServices(responseData.data);
+      // Usar fetchServices del contexto con el ID del técnico
+      const servicesData = await fetchServices({ technicianId: technicianProfile.id });
+      
+      if (servicesData && Array.isArray(servicesData)) {
+        setTechnicianServices(servicesData);
+        console.log('🔥 Servicios del técnico obtenidos:', servicesData);
       } else {
-        throw new Error(responseData.message || 'Error al obtener servicios del técnico');
+        console.log('🔥 No se obtuvieron servicios o formato incorrecto');
+        setTechnicianServices([]);
       }
     } catch (error) {
       console.error('🔥 Error al obtener servicios del técnico:', error);
       setTechnicianError('Error al cargar los servicios del técnico');
     }
-  }, [user]);
+  }, [technicianProfile, fetchServices]);
 
   // useEffect para cargar estadísticas del dashboard
   useEffect(() => {
@@ -120,14 +110,21 @@ const TechnicianDashboard = () => {
     }
   }, [user, fetchServices]);
 
-  // useEffect para cargar perfil y servicios del técnico
+  // useEffect para cargar perfil del técnico
   useEffect(() => {
     if (user?.token && user?.role === 'TECHNICIAN') {
-      console.log('🔥 Cargando datos específicos del técnico');
+      console.log('🔥 Cargando perfil del técnico');
       getCurrentTechnician();
+    }
+  }, [user, getCurrentTechnician]);
+
+  // useEffect para cargar servicios después de obtener el perfil
+  useEffect(() => {
+    if (technicianProfile?.id) {
+      console.log('🔥 Cargando servicios del técnico');
       getTechnicianServices();
     }
-  }, [user, getCurrentTechnician, getTechnicianServices]);
+  }, [technicianProfile, getTechnicianServices]);
 
   // Calcular estadísticas del técnico basadas en sus servicios
   const technicianStats = useMemo(() => {
@@ -136,50 +133,59 @@ const TechnicianDashboard = () => {
         pendingServices: 0,
         completedServices: 0,
         scheduledServices: 0,
-        averageRating: 0
+        averageRating: technicianProfile?.rating || 0
       };
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    console.log('🔥 Calculando estadísticas con', technicianServices.length, 'servicios del técnico');
     
+    // Contadores actualizados según nueva lógica
     const pendingServices = technicianServices.filter(service => 
-      service.status === 'PENDING' || service.status === 'ASSIGNED'
+      service.status === 'PENDING'
+    ).length;
+
+    const inProgressServices = technicianServices.filter(service => 
+      service.status === 'IN_PROGRESS'
     ).length;
 
     const completedServices = technicianServices.filter(service => 
       service.status === 'COMPLETED'
     ).length;
 
-    const scheduledServices = technicianServices.filter(service => 
-      service.status === 'SCHEDULED' || 
-      (service.scheduledDate && service.scheduledDate.includes(today))
+    const confirmedServices = technicianServices.filter(service => 
+      service.status === 'CONFIRMED'
     ).length;
 
-    // Calcular calificación promedio (si hay evaluaciones)
+    // Usar rating del perfil del técnico o calcular desde evaluaciones
     const servicesWithRating = technicianServices.filter(service => 
-      service.rating && service.rating > 0
+      service.clientRating && service.clientRating > 0
     );
     const averageRating = servicesWithRating.length > 0 
-      ? servicesWithRating.reduce((sum, service) => sum + service.rating, 0) / servicesWithRating.length
-      : (technicianProfile?.rating || 4.5);
+      ? servicesWithRating.reduce((sum, service) => sum + service.clientRating, 0) / servicesWithRating.length
+      : (technicianProfile?.rating || 0);
 
-    console.log('🔥 Estadísticas calculadas del técnico:', {
+    const stats = {
       pendingServices,
+      inProgressServices,
       completedServices,
-      scheduledServices,
-      averageRating
+      confirmedServices,
+      averageRating: Math.round(averageRating * 10) / 10
+    };
+
+    console.log('🔥 Estadísticas calculadas del técnico:', stats);
+    console.log('🔥 Servicios por estado:', {
+      total: technicianServices.length,
+      pending: technicianServices.filter(s => s.status === 'PENDING').length,
+      confirmed: technicianServices.filter(s => s.status === 'CONFIRMED').length,
+      inProgress: technicianServices.filter(s => s.status === 'IN_PROGRESS').length,
+      completed: technicianServices.filter(s => s.status === 'COMPLETED').length,
     });
 
-    return {
-      pendingServices,
-      completedServices,
-      scheduledServices,
-      averageRating
-    };
+    return stats;
   }, [technicianServices, technicianProfile]);
 
-  // Filtrar servicios activos (pendientes y programados)
-  const activeServices = useMemo(() => {
+  // Servicios asignados (PENDING e IN_PROGRESS)
+  const assignedServices = useMemo(() => {
     if (!technicianServices || technicianServices.length === 0) {
       return [];
     }
@@ -187,8 +193,6 @@ const TechnicianDashboard = () => {
     return technicianServices
       .filter(service => 
         service.status === 'PENDING' || 
-        service.status === 'ASSIGNED' || 
-        service.status === 'SCHEDULED' ||
         service.status === 'IN_PROGRESS'
       )
       .map(service => ({
@@ -205,17 +209,30 @@ const TechnicianDashboard = () => {
       .sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [technicianServices]);
 
-  // Próximas visitas (servicios programados para los próximos días)
+  // Próximas visitas (CONFIRMED e IN_PROGRESS)
   const upcomingVisits = useMemo(() => {
-    const today = new Date();
-    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    if (!technicianServices || technicianServices.length === 0) {
+      return [];
+    }
 
-    return activeServices.filter(service => {
-      if (!service.date || service.date === 'Fecha no programada') return false;
-      const serviceDate = new Date(service.date);
-      return serviceDate >= today && serviceDate <= nextWeek;
-    });
-  }, [activeServices]);
+    return technicianServices
+      .filter(service => 
+        service.status === 'CONFIRMED' || 
+        service.status === 'IN_PROGRESS'
+      )
+      .map(service => ({
+        id: service.id,
+        client: service.client?.name || service.clientName || 'Cliente no especificado',
+        type: service.serviceType || service.type || 'Tipo no especificado',
+        equipment: service.equipment?.type || service.equipmentType || 'Equipo no especificado',
+        date: service.scheduledDate ? new Date(service.scheduledDate).toLocaleDateString() : 'Fecha no programada',
+        time: service.scheduledDate ? new Date(service.scheduledDate).toLocaleTimeString() : 'Hora no programada',
+        status: service.status?.toLowerCase() || 'pendiente',
+        address: service.client?.address || service.address || 'Dirección no especificada',
+        description: service.description || 'Sin descripción'
+      }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [technicianServices]);
 
   // Mostrar estados de carga
   if (loading || loadingTechnician) {
@@ -264,16 +281,16 @@ const TechnicianDashboard = () => {
           iconBg="bg-warning"
         />
         <StatsCard 
+          title="En Progreso" 
+          value={technicianStats.inProgressServices} 
+          icon={<FiClock className="text-white" />}
+          iconBg="bg-info"
+        />
+        <StatsCard 
           title="Servicios Completados" 
           value={technicianStats.completedServices} 
           icon={<FiCheckCircle className="text-white" />}
           iconBg="bg-success"
-        />
-        <StatsCard 
-          title="Próximos Servicios" 
-          value={technicianStats.scheduledServices} 
-          icon={<FiClock className="text-white" />}
-          iconBg="bg-info"
         />
         <StatsCard 
           title="Calificación Promedio" 
@@ -283,13 +300,16 @@ const TechnicianDashboard = () => {
         />
       </div>
       
-      {/* Servicios Activos */}
+      {/* Servicios Asignados (PENDING e IN_PROGRESS) */}
       <div className="bg-white rounded shadow p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">
-          Mis Servicios Asignados ({activeServices.length})
+          Mis Servicios Asignados ({assignedServices.length})
         </h2>
-        {activeServices.length > 0 ? (
-          <ServicesList services={activeServices} />
+        <p className="text-sm text-gray-600 mb-4">
+          Servicios pendientes de aceptar y en progreso
+        </p>
+        {assignedServices.length > 0 ? (
+          <ServicesList services={assignedServices} />
         ) : (
           <p className="text-gray-500 text-center py-4">
             No tienes servicios asignados en este momento.
@@ -297,11 +317,14 @@ const TechnicianDashboard = () => {
         )}
       </div>
       
-      {/* Próximas visitas */}
+      {/* Próximas visitas (CONFIRMED e IN_PROGRESS) */}
       <div className="bg-white rounded shadow p-6">
         <h2 className="text-xl font-semibold mb-4">
           Próximas Visitas ({upcomingVisits.length})
         </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Servicios confirmados y en progreso
+        </p>
         <div className="space-y-4">
           {upcomingVisits.length > 0 ? (
             upcomingVisits.map(service => (
@@ -319,13 +342,11 @@ const TechnicianDashboard = () => {
                     <div className="text-sm font-medium text-gray-800">{service.date}</div>
                     <div className="text-sm text-gray-600">{service.time}</div>
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                      service.status === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      service.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                      service.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
                       service.status === 'in_progress' ? 'bg-green-100 text-green-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {service.status === 'pendiente' ? 'Pendiente' :
-                       service.status === 'scheduled' ? 'Programado' :
+                      {service.status === 'confirmed' ? 'Confirmado' :
                        service.status === 'in_progress' ? 'En Progreso' :
                        service.status}
                     </span>
@@ -335,7 +356,7 @@ const TechnicianDashboard = () => {
             ))
           ) : (
             <p className="text-gray-500 text-center py-4">
-              No tienes visitas programadas para los próximos días.
+              No tienes visitas confirmadas o en progreso.
             </p>
           )}
         </div>
