@@ -104,15 +104,21 @@ const MyEquipment = () => {
 
   // Manejar eliminación de equipo
   const handleDeleteEquipment = async (equipment) => {
-    console.log('🔥🔥🔥 Attempting to delete equipment:', equipment);
-    if (window.confirm(`¿Está seguro de eliminar el equipo ${equipment.name}?`)) {
-      try {
-        console.log('🔥🔥🔥 Deleting equipment with ID:', equipment.id);
-        await deleteEquipment(equipment.id);
-      } catch (error) {
-        console.error('🔥🔥🔥 Error deleting equipment:', error);
-        alert('Error al eliminar el equipo. Por favor, intente nuevamente.');
-      }
+    console.log('🔥 DELETE - Attempting to delete equipment:', equipment);
+    console.log('🔥 DELETE - Usuario actual desde hook:', user);
+    console.log('🔥 DELETE - ClientId del equipo:', equipment.clientId);
+    console.log('🔥 DELETE - UserId actual:', user?.id || user?.userId);
+    console.log('🔥 DELETE - Rol del usuario:', user?.role);
+    
+    try {
+      console.log('🔥 DELETE - Llamando deleteEquipment con ID:', equipment.id);
+      await deleteEquipment(equipment.id);
+      console.log('🔥 DELETE - Eliminación exitosa');
+    } catch (error) {
+      console.error('🔥 DELETE - Error eliminando equipo:', error);
+      console.error('🔥 DELETE - Error message:', error.message);
+      console.error('🔥 DELETE - Error stack:', error.stack);
+      alert('Error al eliminar el equipo. Por favor, intente nuevamente.');
     }
   };
 
@@ -336,6 +342,7 @@ const MyEquipment = () => {
       {selectedEquipment && (
         <EquipmentDetailModal
           equipment={selectedEquipment}
+          isOpen={!!selectedEquipment}
           onClose={() => setSelectedEquipment(null)}
           onEdit={handleEditEquipment}
           onDelete={handleDeleteEquipment}

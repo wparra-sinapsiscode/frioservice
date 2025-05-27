@@ -324,41 +324,34 @@ const EquipmentDetailModal = ({ equipment, isOpen, onClose, onEdit, onDelete, on
                 </div>
               )}
 
-              {/* Cambiar Estado */}
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-4">Cambiar Estado</h4>
-                <select
-                  value={equipment.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  disabled={isChangingStatus}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  <option value="ACTIVE">Operativo</option>
-                  <option value="MAINTENANCE">Requiere Mantenimiento</option>
-                  <option value="BROKEN">Fuera de Servicio</option>
-                  <option value="INACTIVE">Inactivo</option>
-                </select>
-                {isChangingStatus && (
-                  <p className="text-sm text-blue-600 mt-2">Actualizando estado...</p>
-                )}
-              </div>
 
               {/* Acciones */}
               <div className="bg-gray-50 rounded-lg p-6">
                 <h4 className="text-lg font-semibold text-gray-800 mb-4">Acciones</h4>
                 <div className="space-y-3">
                   <button
-                    onClick={() => onEdit(equipment)}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <FaEdit className="mr-2" />
-                    Editar Equipo
-                  </button>
-                  
-                  <button
                     onClick={() => {
-                      if (window.confirm(`¿Está seguro de eliminar el equipo "${equipment.name}"?`)) {
+                      console.log('🔥 DELETE - Usuario clickeó eliminar');
+                      console.log('🔥 DELETE - Equipment a eliminar:', equipment);
+                      
+                      const confirmText = prompt(
+                        `¿Está seguro de eliminar permanentemente el equipo "${equipment.name}"?\n\n` +
+                        `Esta acción no se puede deshacer y se perderá:\n` +
+                        `• Todo el historial de servicios asociado\n` +
+                        `• Las notas y configuraciones\n\n` +
+                        `Escriba "ELIMINAR" para confirmar:`
+                      );
+                      
+                      console.log('🔥 DELETE - Texto ingresado:', confirmText);
+                      
+                      if (confirmText === "ELIMINAR") {
+                        console.log('🔥 DELETE - Confirmación válida, llamando onDelete');
                         onDelete(equipment);
+                      } else if (confirmText !== null) {
+                        console.log('🔥 DELETE - Confirmación inválida:', confirmText);
+                        alert('Eliminación cancelada. Debe escribir exactamente "ELIMINAR" para confirmar.');
+                      } else {
+                        console.log('🔥 DELETE - Usuario canceló el prompt');
                       }
                     }}
                     className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"

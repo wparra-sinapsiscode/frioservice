@@ -1161,22 +1161,48 @@ export const AppProvider = ({ children }) => {
   }, [user, fetchEquipment]);
 
   const deleteEquipment = useCallback(async (equipmentId) => {
-    if (!user?.token) return;
+    console.log('🔥 DELETE - AppContext deleteEquipment called with ID:', equipmentId);
+    console.log('🔥 DELETE - User object:', user);
+    console.log('🔥 DELETE - Token exists:', !!user?.token);
+    console.log('🔥 DELETE - Token preview:', user?.token?.substring(0, 20) + '...');
+    
+    if (!user?.token) {
+      console.log('🔥 DELETE - No token available, returning');
+      return;
+    }
+    
     try {
-      const response = await fetch(`http://localhost:3001/api/equipment/${equipmentId}`, {
+      const url = `http://localhost:3001/api/equipment/${equipmentId}`;
+      console.log('🔥 DELETE - URL completa:', url);
+      console.log('🔥 DELETE - Headers enviados:', {
+        'Authorization': `Bearer ${user.token.substring(0, 20)}...`
+      });
+      
+      const response = await fetch(url, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${user.token}`
         }
       });
+      
+      console.log('🔥 DELETE - Response status:', response.status);
+      console.log('🔥 DELETE - Response ok:', response.ok);
+      
       if (!response.ok) {
         const errorData = await response.json();
+        console.log('🔥 DELETE - Error response completo:', errorData);
+        console.log('🔥 DELETE - Error message:', errorData.message);
         throw new Error(errorData.message || 'Error al eliminar el equipo.');
       }
+      
+      const successData = await response.json();
+      console.log('🔥 DELETE - Success response:', successData);
       console.log("✅ EQUIPO ELIMINADO CON ID:", equipmentId);
       setEquipment(prev => prev.filter(e => e.id !== equipmentId));
     } catch (error) {
-      console.error("Error en deleteEquipment:", error);
+      console.error("🔥 DELETE - Error en deleteEquipment:", error);
+      console.error("🔥 DELETE - Error message:", error.message);
+      console.error("🔥 DELETE - Error stack:", error.stack);
       throw error;
     }
   }, [user]);
