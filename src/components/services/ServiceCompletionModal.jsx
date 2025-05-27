@@ -144,7 +144,11 @@ const ServiceCompletionModal = ({
     const completionData = {
       workPerformed: formData.workPerformed.trim(),
       timeSpent: parseInt(formData.timeSpent),
-      materialsUsed: formData.materialsUsed,
+      materialsUsed: formData.materialsUsed.map(material => ({
+        ...material,
+        quantity: parseFloat(material.quantity) || 0,
+        cost: parseFloat(material.cost) || 0
+      })),
       ...(formData.technicianNotes.trim() && { technicianNotes: formData.technicianNotes.trim() }),
       ...(formData.clientSignature && { clientSignature: 'confirmed' })
     };
