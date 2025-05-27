@@ -963,7 +963,13 @@ export const AppProvider = ({ children }) => {
   const completeService = useCallback(async (serviceId, completionData) => {
     if (!user?.token) return;
     try {
-      console.log(">>> Completando servicio:", serviceId, "con datos:", completionData);
+      console.log('=== COMPLETANDO SERVICIO ===');
+      console.log('Service ID:', serviceId);
+      console.log('Completion Data:', JSON.stringify(completionData, null, 2));
+      console.log('Headers:', {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.token.substring(0, 20)}...`
+      });
       
       const response = await fetch(`http://localhost:3001/api/services/${serviceId}/complete`, {
         method: 'PATCH',
@@ -974,9 +980,21 @@ export const AppProvider = ({ children }) => {
         body: JSON.stringify(completionData)
       });
 
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', response.headers);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Error al completar servicio');
+        const errorText = await response.text();
+        console.log('❌ Error Response Body (raw):', errorText);
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.log('❌ Error parseado:', errorJson);
+          throw new Error(errorJson.message || `Error ${response.status}: ${response.statusText}`);
+        } catch (parseError) {
+          console.log('❌ Error no es JSON válido:', errorText);
+          throw new Error(`Error ${response.status}: ${errorText}`);
+        }
       }
 
       const updatedServiceResponse = await response.json();

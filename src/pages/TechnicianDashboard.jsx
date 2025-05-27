@@ -1,7 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import StatsCard from '../components/dashboard/StatsCard';
-import ServicesList from '../components/dashboard/ServicesList';
-import { FiClipboard, FiCheckCircle, FiClock, FiStar } from 'react-icons/fi';
+import { 
+  Clipboard, 
+  CheckCircle, 
+  Clock, 
+  Star, 
+  MapPin, 
+  User, 
+  Hammer,
+  Calendar,
+  ArrowRight,
+  Wrench,
+  Settings,
+  Zap
+} from 'lucide-react';
 import { useApp } from '../hooks/useApp';
 import { useAuth } from '../hooks/useAuth';
 
@@ -15,12 +28,150 @@ const TechnicianDashboard = () => {
     error 
   } = useApp();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   // Estados locales para datos específicos del técnico
   const [technicianProfile, setTechnicianProfile] = useState(null);
   const [technicianServices, setTechnicianServices] = useState([]);
   const [loadingTechnician, setLoadingTechnician] = useState(true);
   const [technicianError, setTechnicianError] = useState(null);
+
+  // Utilidades para los servicios
+  const getServiceIcon = (type) => {
+    const iconMap = {
+      'MAINTENANCE': Wrench,
+      'REPAIR': Hammer,
+      'INSTALLATION': Settings,
+      'INSPECTION': CheckCircle,
+      'EMERGENCY': Zap,
+      'CLEANING': Hammer,
+      'CONSULTATION': User
+    };
+    return iconMap[type] || Hammer;
+  };
+
+  const getServiceTypeLabel = (type) => {
+    const typeMap = {
+      'MAINTENANCE': 'Mantenimiento',
+      'REPAIR': 'Reparación',
+      'INSTALLATION': 'Instalación',
+      'INSPECTION': 'Inspección',
+      'EMERGENCY': 'Emergencia',
+      'CLEANING': 'Limpieza',
+      'CONSULTATION': 'Consultoría'
+    };
+    return typeMap[type] || type;
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'PENDING': { label: 'Pendiente', class: 'bg-gray-100 text-gray-800 border-gray-200' },
+      'CONFIRMED': { label: 'Confirmado', class: 'bg-blue-100 text-blue-800 border-blue-200' },
+      'IN_PROGRESS': { label: 'En Proceso', class: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      'ON_HOLD': { label: 'En Espera', class: 'bg-orange-100 text-orange-800 border-orange-200' },
+      'COMPLETED': { label: 'Completado', class: 'bg-green-100 text-green-800 border-green-200' }
+    };
+    return statusMap[status] || { label: status, class: 'bg-gray-100 text-gray-800 border-gray-200' };
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Sin fecha';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return 'Sin hora';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('es-ES', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  // Componente de tarjeta de servicio
+  const ServiceCard = ({ service, onClick }) => {
+    const ServiceIcon = getServiceIcon(service.type);
+    const statusBadge = getStatusBadge(service.status);
+    const clientName = service.client?.companyName || service.client?.contactPerson || service.clientName || 'Cliente no especificado';
+
+    return (
+      <div 
+        onClick={onClick}
+        className="bg-white rounded-xl border border-gray-100 p-5 cursor-pointer transition-all duration-300 ease-in-out hover:shadow-md hover:-translate-y-1 hover:border-blue-200 group"
+      >
+        {/* Header con ícono, tipo de servicio y badge de estado */}
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors duration-200">
+              <ServiceIcon className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-700 group-hover:text-blue-600 transition-colors duration-200">
+                {getServiceTypeLabel(service.type)}
+              </h3>
+            </div>
+          </div>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusBadge.class}`}>
+            {statusBadge.label}
+          </span>
+        </div>
+
+        {/* Nombre del cliente destacado */}
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition-colors duration-200">
+            {clientName}
+          </h2>
+        </div>
+
+        {/* Información de ubicación y fecha */}
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center text-sm text-gray-600">
+            <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+            <span className="truncate">{service.address || 'Dirección no especificada'}</span>
+          </div>
+          <div className="flex items-center text-sm text-gray-600">
+            <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+            <span>{formatDate(service.scheduledDate)} • {formatTime(service.scheduledDate)}</span>
+          </div>
+        </div>
+
+        {/* Descripción opcional */}
+        {service.description && (
+          <p className="text-sm text-gray-500 mb-3 overflow-hidden" style={{ 
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
+          }}>
+            {service.description}
+          </p>
+        )}
+
+        {/* Footer con ID y flecha */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-50">
+          <div className="text-xs text-gray-400">
+            ID: {service.id.slice(-8)}
+          </div>
+          <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all duration-200" />
+        </div>
+      </div>
+    );
+  };
+
+  // Componente de estado vacío
+  const EmptyState = ({ icon: Icon, title, description }) => (
+    <div className="text-center py-12">
+      <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+        <Icon className="w-8 h-8 text-gray-400" />
+      </div>
+      <h3 className="text-lg font-medium text-gray-900 mb-2">{title}</h3>
+      <p className="text-gray-500">{description}</p>
+    </div>
+  );
 
   console.log('🔥 TechnicianDashboard - Usuario actual:', user);
   console.log('🔥 TechnicianDashboard - DashboardStats:', dashboardStats);
@@ -288,89 +439,109 @@ const TechnicianDashboard = () => {
         <StatsCard 
           title="Servicios Pendientes" 
           value={technicianStats.pendingServices} 
-          icon={<FiClipboard className="text-white" />}
+          icon={<Clipboard className="text-white" />}
           iconBg="bg-warning"
         />
         <StatsCard 
           title="En Progreso" 
           value={technicianStats.inProgressServices} 
-          icon={<FiClock className="text-white" />}
+          icon={<Clock className="text-white" />}
           iconBg="bg-info"
         />
         <StatsCard 
           title="Servicios Completados" 
           value={technicianStats.completedServices} 
-          icon={<FiCheckCircle className="text-white" />}
+          icon={<CheckCircle className="text-white" />}
           iconBg="bg-success"
         />
         <StatsCard 
           title="Calificación Promedio" 
           value={technicianStats.averageRating.toFixed(1)} 
-          icon={<FiStar className="text-white" />}
+          icon={<Star className="text-white" />}
           iconBg="bg-primary"
         />
       </div>
       
       {/* Servicios Asignados (PENDING e IN_PROGRESS) */}
-      <div className="bg-white rounded shadow p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">
-          Mis Servicios Asignados ({assignedServices.length})
-        </h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Servicios pendientes de aceptar y en progreso
-        </p>
+      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Mis Servicios Asignados
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {assignedServices.length} servicios pendientes y en progreso
+            </p>
+          </div>
+          {assignedServices.length > 0 && (
+            <button 
+              onClick={() => navigate('/technician/services')}
+              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors duration-200 text-sm font-medium"
+            >
+              <span>Ver todos</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        
         {assignedServices.length > 0 ? (
-          <ServicesList services={assignedServices} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {assignedServices.slice(0, 4).map(service => (
+              <ServiceCard 
+                key={service.id} 
+                service={service}
+                onClick={() => navigate('/technician/services')}
+              />
+            ))}
+          </div>
         ) : (
-          <p className="text-gray-500 text-center py-4">
-            No tienes servicios asignados en este momento.
-          </p>
+          <EmptyState 
+            icon={Clipboard}
+            title="No hay servicios asignados"
+            description="Los nuevos servicios aparecerán aquí cuando sean asignados por el administrador"
+          />
         )}
       </div>
       
       {/* Próximas visitas (CONFIRMED e IN_PROGRESS) */}
-      <div className="bg-white rounded shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">
-          Próximas Visitas ({upcomingVisits.length})
-        </h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Servicios confirmados y en progreso
-        </p>
-        <div className="space-y-4">
-          {upcomingVisits.length > 0 ? (
-            upcomingVisits.map(service => (
-              <div key={service.id} className="border-l-4 border-primary pl-4 py-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-gray-800">{service.client}</h3>
-                    <p className="text-sm text-gray-600">{service.equipment} - {service.type}</p>
-                    <p className="text-sm text-gray-500">{service.address}</p>
-                    {service.description && (
-                      <p className="text-sm text-gray-400 mt-1">{service.description}</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-800">{service.date}</div>
-                    <div className="text-sm text-gray-600">{service.time}</div>
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                      service.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                      service.status === 'in_progress' ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {service.status === 'confirmed' ? 'Confirmado' :
-                       service.status === 'in_progress' ? 'En Progreso' :
-                       service.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500 text-center py-4">
-              No tienes visitas confirmadas o en progreso.
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">
+              Próximas Visitas
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {upcomingVisits.length} servicios confirmados y en progreso
             </p>
+          </div>
+          {upcomingVisits.length > 0 && (
+            <button 
+              onClick={() => navigate('/technician/services')}
+              className="flex items-center space-x-2 text-blue-600 hover:text-blue-700 transition-colors duration-200 text-sm font-medium"
+            >
+              <span>Ver todos</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           )}
         </div>
+        
+        {upcomingVisits.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {upcomingVisits.slice(0, 4).map(service => (
+              <ServiceCard 
+                key={service.id} 
+                service={service}
+                onClick={() => navigate('/technician/services')}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyState 
+            icon={Calendar}
+            title="No hay próximas visitas"
+            description="Las visitas confirmadas y programadas aparecerán aquí"
+          />
+        )}
       </div>
     </div>
   );

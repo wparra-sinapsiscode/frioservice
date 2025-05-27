@@ -145,8 +145,8 @@ const ServiceCompletionModal = ({
       workPerformed: formData.workPerformed.trim(),
       timeSpent: parseInt(formData.timeSpent),
       materialsUsed: formData.materialsUsed,
-      technicianNotes: formData.technicianNotes.trim() || null,
-      clientSignature: formData.clientSignature ? 'confirmed' : null
+      ...(formData.technicianNotes.trim() && { technicianNotes: formData.technicianNotes.trim() }),
+      ...(formData.clientSignature && { clientSignature: 'confirmed' })
     };
 
     console.log('🔥 ServiceCompletionModal - Datos de completar servicio enviados:', completionData);
