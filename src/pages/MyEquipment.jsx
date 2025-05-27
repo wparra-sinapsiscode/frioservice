@@ -16,7 +16,8 @@ const MyEquipment = () => {
     updateEquipment,
     deleteEquipment,
     updateEquipmentStatus,
-    fetchEquipment
+    fetchEquipment,
+    user  // <-- AGREGADO PARA OBTENER USUARIO
   } = useApp();
 
   // Estado para filtros
