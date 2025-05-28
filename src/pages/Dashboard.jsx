@@ -1,11 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../hooks/useApp';
+import { useAuth } from '../hooks/useAuth';
 import StatsCard from '../components/dashboard/StatsCard';
 import ChartContainer from '../components/dashboard/ChartContainer';
 import ServicesList from '../components/dashboard/ServicesList';
 import RecentQuotesTable from '../components/dashboard/RecentQuotesTable';
 
 const Dashboard = () => {
+  const [dailyIncomeStats, setDailyIncomeStats] = useState(null);
+  const [yearlyIncomeStats, setYearlyIncomeStats] = useState(null);
+
+  const { user } = useAuth();
   const { 
     dashboardStats, 
     isLoadingDashboard, 
@@ -17,10 +22,52 @@ const Dashboard = () => {
     fetchIncomeStats
   } = useApp();
 
+  // Función para cargar datos diarios
+  const loadDailyIncomeStats = async () => {
+    if (!user?.token) return;
+    try {
+      const response = await fetch('http://localhost:3001/api/stats/income?period=day', {
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setDailyIncomeStats(data.data || data);
+      }
+    } catch (error) {
+      console.error('Error loading daily income stats:', error);
+    }
+  };
+
+  // Función para cargar datos anuales
+  const loadYearlyIncomeStats = async () => {
+    if (!user?.token) return;
+    try {
+      const response = await fetch('http://localhost:3001/api/stats/income?period=year', {
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setYearlyIncomeStats(data.data || data);
+      }
+    } catch (error) {
+      console.error('Error loading yearly income stats:', error);
+    }
+  };
+
   useEffect(() => {
-    fetchDashboardStats();
-    fetchIncomeStats('month'); // Para el gráfico de servicios por mes
-  }, [fetchDashboardStats, fetchIncomeStats]);
+    if (user?.token) {
+      fetchDashboardStats();
+      fetchIncomeStats('month'); // Para el gráfico de servicios por mes
+      loadDailyIncomeStats();
+      loadYearlyIncomeStats();
+    }
+  }, [fetchDashboardStats, fetchIncomeStats, user?.token]);
 
   if (isLoadingDashboard) {
     return (
@@ -110,10 +157,10 @@ const Dashboard = () => {
             title="Ingresos por Mes" 
             data={{
               day: {
-                labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+                labels: dailyIncomeStats?.incomeByDay?.map(item => item.label) || ['Sin datos'],
                 datasets: [{
                   label: 'Ingresos Diarios (S/)',
-                  data: [0, 0, 0, 0, 0, 0, 0],
+                  data: dailyIncomeStats?.incomeByDay?.map(item => item.income) || [0],
                   borderColor: '#28a745',
                   backgroundColor: 'rgba(40, 167, 69, 0.2)',
                   tension: 0.3,
@@ -121,10 +168,10 @@ const Dashboard = () => {
                 }]
               },
               month: {
-                labels: incomeStats?.monthlyData?.map(item => item.month) || ['Sin datos'],
+                labels: incomeStats?.incomeByMonth?.map(item => item.label) || ['Sin datos'],
                 datasets: [{
                   label: 'Ingresos Mensuales (S/)',
-                  data: incomeStats?.monthlyData?.map(item => item.income) || [0],
+                  data: incomeStats?.incomeByMonth?.map(item => item.income) || [0],
                   borderColor: '#28a745',
                   backgroundColor: 'rgba(40, 167, 69, 0.2)',
                   tension: 0.3,
@@ -132,10 +179,10 @@ const Dashboard = () => {
                 }]
               },
               year: {
-                labels: ['2023', '2024', '2025'],
+                labels: yearlyIncomeStats?.incomeByYear?.map(item => item.label) || ['Sin datos'],
                 datasets: [{
                   label: 'Ingresos Anuales (S/)',
-                  data: [0, 0, dashboardStats?.monthlyIncome?.current || 0],
+                  data: yearlyIncomeStats?.incomeByYear?.map(item => item.income) || [0],
                   borderColor: '#28a745',
                   backgroundColor: 'rgba(40, 167, 69, 0.2)',
                   tension: 0.3,
