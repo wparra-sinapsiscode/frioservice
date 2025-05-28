@@ -1,5 +1,5 @@
 import React from 'react';
-import { getEventsForDate } from '../../utils/calendarMockData';
+import { getEventsForDate } from '../../utils/serviceCalendarUtils';
 
 const CalendarWeek = ({ weekDays, events }) => {
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -52,9 +52,9 @@ const CalendarWeek = ({ weekDays, events }) => {
                     <div 
                       key={eventIndex}
                       className={`text-white py-1 px-2 rounded text-xs mb-1 cursor-pointer ${
-                        event.type === 'programado' ? 'bg-info' : 'bg-warning'
+                        event.color || 'bg-gray-500'
                       }`}
-                      title={`${event.title} - ${event.client} (${event.time})`}
+                      title={`${event.title} - ${event.client} (${event.time}) - Estado: ${event.status} - Prioridad: ${event.priority}`}
                     >
                       {event.title} - {event.client}
                     </div>

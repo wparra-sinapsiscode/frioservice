@@ -1,5 +1,5 @@
 import React from 'react';
-import { getEventsForDate } from '../../utils/calendarMockData';
+import { getEventsForDate } from '../../utils/serviceCalendarUtils';
 
 const CalendarDayView = ({ selectedDate, events }) => {
   const hours = Array.from({ length: 14 }, (_, i) => i + 7); // 7 AM a 8 PM
@@ -52,9 +52,7 @@ const CalendarDayView = ({ selectedDate, events }) => {
                       <div 
                         key={eventIndex}
                         className={`p-3 rounded border-l-4 cursor-pointer ${
-                          event.type === 'programado' 
-                            ? 'bg-info/10 border-info' 
-                            : 'bg-warning/10 border-warning'
+                          event.color ? `${event.color}/10 border-${event.color.replace('bg-', '')}` : 'bg-gray-500/10 border-gray-500'
                         }`}
                       >
                         <div className="flex justify-between items-start">
@@ -68,14 +66,15 @@ const CalendarDayView = ({ selectedDate, events }) => {
                             <p className="text-sm text-gray">
                               Técnico: {event.technician}
                             </p>
+                            <p className="text-sm text-gray">
+                              Estado: {event.status} | Prioridad: {event.priority}
+                            </p>
                           </div>
                           <div className="text-right">
-                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                              event.type === 'programado' 
-                                ? 'bg-info text-white' 
-                                : 'bg-warning text-white'
+                            <span className={`inline-block px-2 py-1 rounded text-xs font-medium text-white ${
+                              event.color || 'bg-gray-500'
                             }`}>
-                              {event.type === 'programado' ? 'Programado' : 'Correctivo'}
+                              {event.type?.toUpperCase() || 'SERVICIO'}
                             </span>
                             <p className="text-sm font-medium mt-1">
                               {event.time}

@@ -1,6 +1,6 @@
 import React from 'react';
 import CalendarDay from './CalendarDay';
-import { getEventsForDate } from '../../utils/calendarMockData';
+import { getEventsForDate } from '../../utils/serviceCalendarUtils';
 
 const CalendarGrid = ({ days, events }) => {
   const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];

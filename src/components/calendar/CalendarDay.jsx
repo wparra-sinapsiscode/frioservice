@@ -16,9 +16,9 @@ const CalendarDay = ({ day, isToday, isOtherMonth, events }) => {
           <div 
             key={index}
             className={`text-white py-1 px-2 rounded text-xs whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer ${
-              event.type === 'programado' ? 'bg-info' : 'bg-warning'
+              event.color || 'bg-gray-500'
             }`}
-            title={`${event.title} - ${event.client} (${event.time})`}
+            title={`${event.title} - ${event.client} (${event.time}) - Estado: ${event.status} - Prioridad: ${event.priority}`}
           >
             {event.time} - {event.title}
           </div>

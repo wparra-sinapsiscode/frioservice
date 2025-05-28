@@ -1,23 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { FaArrowLeft, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import CalendarGrid from '../components/calendar/CalendarGrid';
 import CalendarWeek from '../components/calendar/CalendarWeek';
 import CalendarDayView from '../components/calendar/CalendarDayView';
 import { 
-  calendarEvents, 
   generateCalendarDays, 
   generateWeekDays,
   getSelectedDayDate,
-  filterCalendarEvents 
-} from '../utils/calendarMockData';
-import { technicianData } from '../utils/mockData';
+  filterCalendarEvents,
+  mapServicesToCalendarEvents
+} from '../utils/serviceCalendarUtils';
+import { useApp } from '../hooks/useApp';
 
 const ServiceCalendar = () => {
-  const [currentDate, setCurrentDate] = useState({
-    month: 4, // Mayo (0-indexed)
-    year: 2025,
-    day: 21, // Día actual para vistas de semana y día
+  // Obtener datos de servicios del contexto
+  const { services, technicians, isLoadingServices, fetchServices } = useApp();
+  
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return {
+      month: now.getMonth(),
+      year: now.getFullYear(),
+      day: now.getDate(),
+    };
   });
   
   const [viewMode, setViewMode] = useState('month');
@@ -25,7 +31,19 @@ const ServiceCalendar = () => {
   const [filters, setFilters] = useState({
     types: ['programado', 'correctivo'],
     technician: 'todos',
+    status: 'todos',
+    priority: 'todos'
   });
+  
+  // Cargar servicios cuando el componente se monta
+  useEffect(() => {
+    fetchServices();
+  }, [fetchServices]);
+  
+  // Convertir servicios a eventos del calendario
+  const calendarEvents = useMemo(() => {
+    return mapServicesToCalendarEvents(services || []);
+  }, [services]);
   
   // Obtener datos del calendario según la vista
   const calendarDays = generateCalendarDays(currentDate.year, currentDate.month);
@@ -104,6 +122,14 @@ const ServiceCalendar = () => {
     setFilters(prev => ({ ...prev, technician: e.target.value }));
   };
 
+  const handleStatusChange = (e) => {
+    setFilters(prev => ({ ...prev, status: e.target.value }));
+  };
+
+  const handlePriorityChange = (e) => {
+    setFilters(prev => ({ ...prev, priority: e.target.value }));
+  };
+
   // Función para obtener el título según la vista
   const getViewTitle = () => {
     if (viewMode === 'month') {
@@ -179,7 +205,7 @@ const ServiceCalendar = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-6 mb-5 pb-4 border-b border-gray-light">
+        <div className="flex items-center gap-6 mb-5 pb-4 border-b border-gray-light flex-wrap">
           <div className="flex flex-col">
             <label className="mb-2 font-medium">Tipo:</label>
             <div className="flex gap-4">
@@ -214,33 +240,74 @@ const ServiceCalendar = () => {
               onChange={handleTechnicianChange}
             >
               <option value="todos">Todos</option>
-              {technicianData.map((tech, index) => (
-                <option key={index} value={tech.name}>{tech.name}</option>
+              {technicians.map((tech) => (
+                <option key={tech.id} value={tech.name || `${tech.firstName} ${tech.lastName}`}>
+                  {tech.name || `${tech.firstName} ${tech.lastName}`}
+                </option>
               ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="mb-2 font-medium">Estado:</label>
+            <select 
+              className="px-2 py-2 border border-gray-light rounded min-w-[120px] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              value={filters.status}
+              onChange={handleStatusChange}
+            >
+              <option value="todos">Todos</option>
+              <option value="pending">Pendiente</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="in_progress">En Progreso</option>
+              <option value="completed">Completado</option>
+              <option value="cancelled">Cancelado</option>
+              <option value="on_hold">En Espera</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="mb-2 font-medium">Prioridad:</label>
+            <select 
+              className="px-2 py-2 border border-gray-light rounded min-w-[120px] focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              value={filters.priority}
+              onChange={handlePriorityChange}
+            >
+              <option value="todos">Todas</option>
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="urgent">Urgente</option>
             </select>
           </div>
         </div>
         
-        <div className="calendar-container">
-          {viewMode === 'month' && (
-            <CalendarGrid 
-              days={calendarDays} 
-              events={filteredEvents} 
-            />
-          )}
-          {viewMode === 'week' && (
-            <CalendarWeek 
-              weekDays={weekDays} 
-              events={filteredEvents} 
-            />
-          )}
-          {viewMode === 'day' && (
-            <CalendarDayView 
-              selectedDate={selectedDayDate} 
-              events={filteredEvents} 
-            />
-          )}
-        </div>
+        {isLoadingServices ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="loading loading-spinner loading-lg text-primary"></div>
+            <span className="ml-3 text-gray-600">Cargando servicios...</span>
+          </div>
+        ) : (
+          <div className="calendar-container">
+            {viewMode === 'month' && (
+              <CalendarGrid 
+                days={calendarDays} 
+                events={filteredEvents} 
+              />
+            )}
+            {viewMode === 'week' && (
+              <CalendarWeek 
+                weekDays={weekDays} 
+                events={filteredEvents} 
+              />
+            )}
+            {viewMode === 'day' && (
+              <CalendarDayView 
+                selectedDate={selectedDayDate} 
+                events={filteredEvents} 
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
