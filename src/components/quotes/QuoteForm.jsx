@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FaTimes, FaUser, FaUserTie, FaCog, FaCheck, FaInfoCircle, FaExclamationCircle } from 'react-icons/fa';
 import { AppContext } from '../../context/AppContext';
+import { useAuth } from '../../hooks/useAuth';
 import { getClientDisplayName } from '../../utils/clientUtils';
 
 const QuoteForm = ({ isOpen, onClose, onSave, editingQuote }) => {
   const { clients } = useContext(AppContext);
+  const { user } = useAuth();
   const isEditing = !!editingQuote;
 
   // ============ ESTADO PRINCIPAL ============
@@ -104,10 +106,13 @@ const QuoteForm = ({ isOpen, onClose, onSave, editingQuote }) => {
       setIsLoadingClientData(true);
       setError('');
       
-      const token = localStorage.getItem('token');
+      if (!user?.token) {
+        throw new Error('Token de autenticación no disponible');
+      }
+      
       const response = await fetch(`http://localhost:3001/api/clients/${clientId}/quote-options`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${user.token}`,
           'Content-Type': 'application/json'
         }
       });
