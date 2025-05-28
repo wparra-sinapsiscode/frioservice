@@ -27,7 +27,11 @@ const Statistics = () => {
     technicianRankings,
     isLoadingTechnicianRankings,
     errorTechnicianRankings,
-    fetchTechnicianRankings
+    fetchTechnicianRankings,
+    services,
+    isLoadingServices,
+    errorServices,
+    fetchServices
   } = useApp();
 
   // Efectos para cargar datos
@@ -35,15 +39,41 @@ const Statistics = () => {
     fetchDashboardStats();
     fetchServiceStats();
     fetchTechnicianRankings();
-  }, [fetchDashboardStats, fetchServiceStats, fetchTechnicianRankings]);
+    fetchServices();
+  }, [fetchDashboardStats, fetchServiceStats, fetchTechnicianRankings, fetchServices]);
 
   useEffect(() => {
     fetchIncomeStats(period);
   }, [fetchIncomeStats, period]);
 
+  // Helper para badges de estado
+  const getStatusBadge = (status) => {
+    const statusColors = {
+      'PENDING': 'bg-yellow-100 text-yellow-800',
+      'IN_PROGRESS': 'bg-blue-100 text-blue-800',
+      'COMPLETED': 'bg-green-100 text-green-800',
+      'CANCELLED': 'bg-red-100 text-red-800'
+    };
+    return statusColors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Helper para badges de prioridad
+  const getPriorityBadge = (priority) => {
+    const priorityColors = {
+      'LOW': 'bg-gray-100 text-gray-800',
+      'MEDIUM': 'bg-yellow-100 text-yellow-800',
+      'HIGH': 'bg-red-100 text-red-800',
+      'URGENT': 'bg-red-500 text-white'
+    };
+    return priorityColors[priority] || 'bg-gray-100 text-gray-800';
+  };
+
   // Función para mostrar la métrica adecuada en el gráfico de eficiencia
   const getTechnicianMetricData = () => {
-    if (!technicianRankings || !technicianRankings.length) {
+    // ✅ Acceder a la estructura correcta del backend
+    const technicians = technicianRankings?.topTechnicians || [];
+    
+    if (!technicians || !technicians.length) {
       return {
         labels: [],
         datasets: [{
@@ -54,7 +84,7 @@ const Statistics = () => {
       };
     }
 
-    const labels = technicianRankings.map(tech => tech.technicianName || 'Sin nombre');
+    const labels = technicians.map(tech => tech.name || 'Sin nombre');
     
     switch (efficiencyMetric) {
       case 'tiempo':
@@ -62,7 +92,7 @@ const Statistics = () => {
           labels,
           datasets: [{
             label: 'Tiempo promedio (horas)',
-            data: technicianRankings.map(tech => parseFloat(tech.averageTime) || 0),
+            data: technicians.map(tech => parseFloat(tech.averageTime) || 0),
             backgroundColor: '#17a2b8',
           }]
         };
@@ -71,7 +101,7 @@ const Statistics = () => {
           labels,
           datasets: [{
             label: 'Calificación Promedio (1-5)',
-            data: technicianRankings.map(tech => parseFloat(tech.averageRating) || 0),
+            data: technicians.map(tech => parseFloat(tech.rating) || 0),
             backgroundColor: '#6f42c1',
           }]
         };
@@ -80,7 +110,7 @@ const Statistics = () => {
           labels,
           datasets: [{
             label: 'Servicios completados',
-            data: technicianRankings.map(tech => parseInt(tech.completedServices) || 0),
+            data: technicians.map(tech => parseInt(tech.servicesCompleted) || 0),
             backgroundColor: '#fd7e14',
           }]
         };
@@ -89,7 +119,7 @@ const Statistics = () => {
           labels,
           datasets: [{
             label: 'Tiempo promedio (horas)',
-            data: technicianRankings.map(tech => parseFloat(tech.averageTime) || 0),
+            data: technicians.map(tech => parseFloat(tech.averageTime) || 0),
             backgroundColor: '#17a2b8',
           }]
         };
@@ -264,17 +294,49 @@ const Statistics = () => {
           </div>
         </div>
         
-        <PieChart 
-          title="Servicios por Equipo"
-          data={{
-            labels: serviceStats?.servicesByEquipment?.map(item => item.equipmentType) || ['Sin datos'],
-            datasets: [{
-              data: serviceStats?.servicesByEquipment?.map(item => item.count) || [0],
-              backgroundColor: ['#007bff', '#20c997', '#6f42c1', '#fd7e14', '#6c757d'],
-              borderWidth: 1,
-            }]
-          }}
-        />
+        <div className="bg-white rounded shadow p-5">
+          <div className="mb-4">
+            <h3 className="text-lg font-medium m-0">Servicios por Equipo</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-3">Título</th>
+                  <th className="text-left p-3">Cliente</th>
+                  <th className="text-center p-3">Estado</th>
+                  <th className="text-center p-3">Prioridad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {services && services.length > 0 ? (
+                  services.slice(0, 10).map((service, index) => (
+                    <tr key={service.id || index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
+                      <td className="p-3 font-medium">{service.title || 'Sin título'}</td>
+                      <td className="p-3">{service.client?.companyName || 'Sin cliente'}</td>
+                      <td className="p-3 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(service.status)}`}>
+                          {service.status || 'Sin estado'}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPriorityBadge(service.priority)}`}>
+                          {service.priority || 'Sin prioridad'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="p-3 text-center text-gray-500">
+                      No hay servicios disponibles
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       
       {/* Tabla de técnicos destacados */}
@@ -290,23 +352,21 @@ const Statistics = () => {
                 <th className="text-center p-3">Servicios</th>
                 <th className="text-center p-3">Tiempo Promedio</th>
                 <th className="text-center p-3">Satisfacción</th>
-                <th className="text-center p-3">Ingresos Generados</th>
               </tr>
             </thead>
             <tbody>
-              {technicianRankings && technicianRankings.length > 0 ? (
-                technicianRankings.map((tech, index) => (
+              {technicianRankings?.topTechnicians && technicianRankings.topTechnicians.length > 0 ? (
+                technicianRankings.topTechnicians.map((tech, index) => (
                   <tr key={tech.technicianId || index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
-                    <td className="p-3 font-medium">{tech.technicianName || 'Sin nombre'}</td>
-                    <td className="p-3 text-center">{tech.completedServices || 0}</td>
+                    <td className="p-3 font-medium">{tech.name || 'Sin nombre'}</td>
+                    <td className="p-3 text-center">{tech.servicesCompleted || 0}</td>
                     <td className="p-3 text-center">{tech.averageTime || '0'}h</td>
-                    <td className="p-3 text-center">{tech.averageRating || '0'}/5</td>
-                    <td className="p-3 text-center">S/ {tech.totalIncome || 0}</td>
+                    <td className="p-3 text-center">{tech.rating || '0'}/5</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="p-3 text-center text-gray-500">
+                  <td colSpan="4" className="p-3 text-center text-gray-500">
                     No hay datos de técnicos disponibles
                   </td>
                 </tr>

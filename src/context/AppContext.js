@@ -46,10 +46,13 @@ export const AppProvider = ({ children }) => {
   // 3.7. ESTADOS PARA RANKINGS DE TÉCNICOS E INGRESOS
   const [technicianRankings, setTechnicianRankings] = useState(null);
   const [incomeStats, setIncomeStats] = useState(null);
+  const [servicesByEquipment, setServicesByEquipment] = useState(null);
   const [isLoadingTechnicianRankings, setIsLoadingTechnicianRankings] = useState(false);
   const [isLoadingIncomeStats, setIsLoadingIncomeStats] = useState(false);
+  const [isLoadingServicesByEquipment, setIsLoadingServicesByEquipment] = useState(false);
   const [errorTechnicianRankings, setErrorTechnicianRankings] = useState(null);
   const [errorIncomeStats, setErrorIncomeStats] = useState(null);
+  const [errorServicesByEquipment, setErrorServicesByEquipment] = useState(null);
 
   // 4. EFECTO PARA CARGAR CLIENTES DESDE LA API (Solo para ADMIN y TECHNICIAN)
   const fetchClients = useCallback(async () => { // Hacemos fetchClients accesible
@@ -1412,6 +1415,44 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
+  const fetchServicesByEquipment = useCallback(async () => {
+    console.log('🔥🔥🔥 STATS: Obteniendo servicios por equipo');
+    
+    if (user?.token && user?.role === 'ADMIN') {
+      setIsLoadingServicesByEquipment(true);
+      setErrorServicesByEquipment(null);
+      try {
+        const response = await fetch('http://localhost:3001/api/stats/services/by-equipment', {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Error ${response.status}: ${errorText || 'No se pudieron obtener los servicios por equipo.'}`);
+        }
+        
+        const responseData = await response.json();
+        console.log(">>> SERVICIOS POR EQUIPO:", JSON.stringify(responseData, null, 2));
+        
+        const statsData = responseData.data || responseData;
+        setServicesByEquipment(statsData);
+        
+      } catch (err) {
+        console.error("Error en fetchServicesByEquipment:", err);
+        setErrorServicesByEquipment(err.message);
+      } finally {
+        setIsLoadingServicesByEquipment(false);
+      }
+    } else {
+      setServicesByEquipment(null);
+      setIsLoadingServicesByEquipment(false);
+      setErrorServicesByEquipment(null);
+    }
+  }, [user]);
+
 
   // 6. VALOR DEL CONTEXTO
   const contextValue = useMemo(() => ({
@@ -1483,7 +1524,11 @@ export const AppProvider = ({ children }) => {
     technicianRankings,
     isLoadingTechnicianRankings,
     errorTechnicianRankings,
-    fetchTechnicianRankings
+    fetchTechnicianRankings,
+    servicesByEquipment,
+    isLoadingServicesByEquipment,
+    errorServicesByEquipment,
+    fetchServicesByEquipment
   }), [
     clients, isLoadingClients, errorClients, addClient, updateClient, deleteClient, updateClientStatus, fetchClients,
     technicians, isLoadingTechnicians, errorTechnicians, addTechnician, updateTechnician, deleteTechnician, WorkspaceTechnicians,
@@ -1493,7 +1538,8 @@ export const AppProvider = ({ children }) => {
     dashboardStats, isLoadingDashboard, errorDashboard, fetchDashboardStats,
     serviceStats, isLoadingServiceStats, errorServiceStats, fetchServiceStats,
     incomeStats, isLoadingIncomeStats, errorIncomeStats, fetchIncomeStats,
-    technicianRankings, isLoadingTechnicianRankings, errorTechnicianRankings, fetchTechnicianRankings
+    technicianRankings, isLoadingTechnicianRankings, errorTechnicianRankings, fetchTechnicianRankings,
+    servicesByEquipment, isLoadingServicesByEquipment, errorServicesByEquipment, fetchServicesByEquipment
   ]);
 
   return (

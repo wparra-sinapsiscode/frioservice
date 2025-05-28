@@ -85,7 +85,7 @@ const RecentQuotesTable = ({ quotes }) => {
         <table className="w-full border-collapse mb-4">
           <thead>
             <tr>
-              <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">ID</th>
+              <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light hidden">ID</th>
               <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">Cliente</th>
               <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">Tipo</th>
               <th className="py-3 px-4 text-left bg-secondary text-gray-dark font-semibold border-b-2 border-gray-light">Monto</th>
@@ -97,7 +97,7 @@ const RecentQuotesTable = ({ quotes }) => {
           <tbody>
             {filteredQuotes.map((quote, index) => (
               <tr key={index}>
-                <td className="py-3 px-4 border-b border-gray-light">{quote.id}</td>
+                <td className="py-3 px-4 border-b border-gray-light hidden">{quote.id}</td>
                 <td className="py-3 px-4 border-b border-gray-light">{quote.client}</td>
                 <td className="py-3 px-4 border-b border-gray-light">{quote.type}</td>
                 <td className="py-3 px-4 border-b border-gray-light">{quote.amount}</td>
@@ -137,7 +137,7 @@ const RecentQuotesTable = ({ quotes }) => {
             
             {filteredQuotes.length === 0 && (
               <tr>
-                <td colSpan="7" className="py-4 text-center text-gray border-b border-gray-light">
+                <td colSpan="6" className="py-4 text-center text-gray border-b border-gray-light">
                   No se encontraron cotizaciones
                 </td>
               </tr>
