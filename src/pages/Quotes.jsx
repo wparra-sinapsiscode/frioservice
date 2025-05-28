@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaPlus } from 'react-icons/fa';
 import QuoteFilters from '../components/quotes/QuoteFilters';
 import QuotesTable from '../components/quotes/QuotesTable';
-import QuoteModal from '../components/quotes/QuoteModal';
+import QuoteForm from '../components/quotes/QuoteForm';
 import { useApp } from '../hooks/useApp';
 import { getClientDisplayName } from '../utils/clientUtils';
 
@@ -231,7 +231,7 @@ const Quotes = () => {
       </div>
       
       {/* Modal para nueva/editar cotización */}
-      <QuoteModal 
+      <QuoteForm 
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSave={handleSaveQuote}
