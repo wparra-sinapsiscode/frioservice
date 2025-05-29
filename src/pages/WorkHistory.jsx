@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { FiCalendar, FiFilter, FiMapPin, FiTool, FiClock, FiCheckCircle, FiAlertTriangle, FiLoader } from 'react-icons/fi';
+import { FiCalendar, FiFilter, FiMapPin, FiTool, FiClock, FiCheckCircle, FiAlertTriangle, FiLoader, FiMessageSquare, FiStar } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 
 const WorkHistory = () => {
   const { user } = useAuth();
   const [workHistory, setWorkHistory] = useState([]);
+  const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadingEvaluations, setLoadingEvaluations] = useState(true);
+  const [errorEvaluations, setErrorEvaluations] = useState(null);
   
   // Estado para los filtros
   const [monthFilter, setMonthFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
 
-  // Fetch work history from API
+  // Fetch work history and evaluations from API
   useEffect(() => {
     const fetchWorkHistory = async () => {
       if (!user?.id || !user?.token) {
@@ -60,7 +63,11 @@ const WorkHistory = () => {
             status: getServiceStatus(service.status),
             priority: service.priority,
             clientNotes: service.clientNotes,
-            technicianNotes: service.technicianNotes
+            technicianNotes: service.technicianNotes,
+            // Información de evaluación
+            clientRating: service.clientRating,
+            clientComment: service.clientComment,
+            ratedAt: service.ratedAt
           }));
 
           setWorkHistory(transformedData);
@@ -75,7 +82,48 @@ const WorkHistory = () => {
       }
     };
 
+    // Función para obtener evaluaciones
+    const fetchEvaluations = async () => {
+      if (!user?.id || !user?.token) return;
+      
+      try {
+        setLoadingEvaluations(true);
+        setErrorEvaluations(null);
+        
+        const response = await fetch(
+          `http://localhost:3001/api/services/technician/${user.id}/evaluations`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${user.token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('🌟 Evaluations data:', data);
+        
+        if (data.success && data.data) {
+          setEvaluations(data.data);
+        } else {
+          throw new Error(data.message || 'Error al obtener evaluaciones');
+        }
+      } catch (error) {
+        console.error('Error fetching evaluations:', error);
+        setErrorEvaluations('Error al cargar evaluaciones: ' + error.message);
+      } finally {
+        setLoadingEvaluations(false);
+      }
+    };
+    
+    // Ejecutar ambas consultas
     fetchWorkHistory();
+    fetchEvaluations();
   }, [user]);
 
   // Helper functions
@@ -269,6 +317,83 @@ const WorkHistory = () => {
         </div>
       </div>
       
+      {/* Resumen de evaluaciones */}
+      {!loadingEvaluations && evaluations.length > 0 && (
+        <div className="bg-white rounded shadow p-6 mb-6">
+          <div className="flex items-center mb-4">
+            <FiStar className="text-yellow-500 mr-2" />
+            <h2 className="text-xl font-semibold">Resumen de Evaluaciones</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <p className="text-sm text-gray-600 mb-1">Calificación promedio</p>
+              <div className="flex items-center">
+                <span className="text-2xl font-bold text-blue-700 mr-2">
+                  {(evaluations.reduce((sum, evaluation) => sum + evaluation.rating, 0) / evaluations.length).toFixed(1)}
+                </span>
+                <div className="flex">
+                  {[...Array(5)].map((_, i) => (
+                    <FiStar 
+                      key={i}
+                      className={`${i < Math.round(evaluations.reduce((sum, evaluation) => sum + evaluation.rating, 0) / evaluations.length) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'} h-4 w-4`} 
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <p className="text-sm text-gray-600 mb-1">Total de evaluaciones</p>
+              <p className="text-2xl font-bold text-blue-700">{evaluations.length}</p>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <p className="text-sm text-gray-600 mb-1">Evaluaciones recientes</p>
+              <p className="text-2xl font-bold text-blue-700">
+                {evaluations.filter(e => {
+                  const evalDate = new Date(e.date);
+                  const thirtyDaysAgo = new Date();
+                  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                  return evalDate > thirtyDaysAgo;
+                }).length}
+              </p>
+              <p className="text-xs text-gray-500">En los últimos 30 días</p>
+            </div>
+          </div>
+          
+          {evaluations.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-medium mb-2">Evaluaciones recientes</h3>
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {evaluations.slice(0, 5).map((evaluation, index) => (
+                  <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{evaluation.clientName}</p>
+                        <p className="text-sm text-gray-500">{evaluation.serviceType} • {evaluation.serviceDate}</p>
+                      </div>
+                      <div className="flex items-center">
+                        {[...Array(5)].map((_, i) => (
+                          <FiStar 
+                            key={i}
+                            className={`${i < evaluation.rating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'} h-4 w-4`} 
+                          />
+                        ))}
+                        <span className="ml-1 text-sm">{evaluation.rating}</span>
+                      </div>
+                    </div>
+                    {evaluation.comment && (
+                      <p className="text-gray-700 mt-1 italic text-sm">"{evaluation.comment}"</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
       {/* Historial de trabajo */}
       <div className="bg-white rounded shadow p-6">
         <h2 className="text-xl font-semibold mb-4">Servicios Realizados ({filteredHistory.length})</h2>
@@ -351,6 +476,35 @@ const WorkHistory = () => {
                   
                   <div className="border-t pt-4">
                     <h4 className="font-semibold mb-2">Detalles del Servicio</h4>
+                    
+                    {/* Sección de evaluación del cliente */}
+                    {work.clientRating && (
+                      <div className="bg-blue-50 p-4 rounded-lg mb-4 border border-blue-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <FiMessageSquare className="text-blue-500 mr-2" />
+                            <h5 className="font-semibold text-blue-700">Evaluación del cliente</h5>
+                          </div>
+                          <div className="flex items-center">
+                            {[...Array(5)].map((_, i) => (
+                              <FiStar 
+                                key={i}
+                                className={`${i < work.clientRating ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'} h-4 w-4`} 
+                              />
+                            ))}
+                            <span className="ml-1 text-sm font-medium">{work.clientRating.toFixed(1)}</span>
+                          </div>
+                        </div>
+                        {work.clientComment && (
+                          <div className="mt-2">
+                            <p className="text-gray-700 italic">"{work.clientComment}"</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {work.ratedAt ? `Evaluado el ${new Date(work.ratedAt).toLocaleDateString('es-ES')}` : ''}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-dark font-medium">Descripción</p>
