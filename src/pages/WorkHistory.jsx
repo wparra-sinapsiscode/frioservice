@@ -29,7 +29,7 @@ const WorkHistory = () => {
         setError(null);
 
         const response = await fetch(
-          `http://localhost:3001/api/services/technician/${user.id}`,
+          `http://localhost:3001/api/services/technician/${user.id}?status=COMPLETED`,
           {
             method: 'GET',
             headers: {
@@ -45,6 +45,20 @@ const WorkHistory = () => {
 
         const data = await response.json();
         console.log('🔥 Work history data:', data);
+        console.log('🔥 Total services:', data.data ? data.data.length : 0);
+        console.log('🔥 Services with ratings:', data.data ? data.data.filter(s => s.clientRating !== null).length : 0);
+        console.log('🔥 Services without ratings:', data.data ? data.data.filter(s => s.clientRating === null).length : 0);
+        
+        // Log the first service to check its structure
+        if (data.data && data.data.length > 0) {
+          console.log('🔥 Sample service:', {
+            id: data.data[0].id,
+            title: data.data[0].title,
+            status: data.data[0].status,
+            clientRating: data.data[0].clientRating,
+            clientComment: data.data[0].clientComment,
+          });
+        }
 
         if (data.success && data.data) {
           // Transform API data to component format
