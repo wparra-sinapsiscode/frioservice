@@ -107,8 +107,10 @@ const MyServices = () => {
     return translations[status] || 'pendiente';
   };
 
-  // Servicios mapeados para la UI
-  const myServices = services ? services.map(mapServiceToUI) : [];
+  // Servicios mapeados para la UI (excluyendo los completados)
+  const myServices = services ? services
+    .filter(service => service.status !== 'COMPLETED') // Excluir servicios completados
+    .map(mapServiceToUI) : [];
 
   // Filtrar servicios por estado
   const filteredServices = statusFilter === 'todos' 
@@ -258,12 +260,6 @@ const MyServices = () => {
             onClick={() => setStatusFilter('en-progreso')}
           >
             En Progreso ({myServices.filter(s => s.status === 'en-progreso').length})
-          </button>
-          <button 
-            className={`btn ${statusFilter === 'completado' ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => setStatusFilter('completado')}
-          >
-            Completados ({myServices.filter(s => s.status === 'completado').length})
           </button>
         </div>
       </div>
