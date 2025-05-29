@@ -220,7 +220,7 @@ const ServiceModal = ({ onSave, onClose, editingService, clients, technicians, i
       address: formData.address,
       contactPhone: formData.contactPhone,
       emergencyContact: formData.emergencyContact || null,
-      accessInstructions: formData.accessInstructions || null,
+      accessInstructions: formData.accessInstructions || '',
       technicianId: formData.technicianId || null,
       equipmentIds: formData.equipmentIds,
       estimatedDuration: formData.estimatedDuration ? parseInt(formData.estimatedDuration) : null,
