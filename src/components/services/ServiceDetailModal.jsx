@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, User, MapPin, FileText, Wrench, AlertCircle, Star, MessageSquare } from 'lucide-react';
 
-const ServiceDetailModal = ({ service, isOpen, onClose }) => {
+const ServiceDetailModal = ({ service: initialService, isOpen, onClose }) => {
+  const [service, setService] = useState(initialService);
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  
+  // Actualizar service cuando initialService cambia
+  useEffect(() => {
+    setService(initialService);
+  }, [initialService]);
   
   if (!isOpen || !service) return null;
 
@@ -86,6 +92,13 @@ const ServiceDetailModal = ({ service, isOpen, onClose }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Error al enviar la evaluación');
       }
+      
+      // Obtener los datos actualizados del servicio tras la evaluación exitosa
+      const updatedServiceData = await response.json();
+      const updatedService = updatedServiceData.data || updatedServiceData;
+      
+      // Actualizar el estado local del servicio con la nueva información
+      setService(updatedService);
       
       setSubmitSuccess(true);
       setTimeout(() => {
@@ -284,9 +297,18 @@ const ServiceDetailModal = ({ service, isOpen, onClose }) => {
             </div>
             
             {service.clientComment && (
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <p className="text-gray-800 whitespace-pre-wrap">{service.clientComment}</p>
-                <p className="text-sm text-gray-500 mt-2">Enviado el {formatDate(service.ratedAt)}</p>
+              <div className={`bg-gray-50 p-4 rounded-lg mb-4 ${submitSuccess ? 'border-2 border-green-500 animate-pulse' : ''}`}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-gray-800 whitespace-pre-wrap">{service.clientComment}</p>
+                    <p className="text-sm text-gray-500 mt-2">Enviado el {formatDate(service.ratedAt)}</p>
+                  </div>
+                  {submitSuccess && (
+                    <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
+                      ¡Enviado con éxito!
+                    </div>
+                  )}
+                </div>
               </div>
             )}
             
@@ -332,8 +354,11 @@ const ServiceDetailModal = ({ service, isOpen, onClose }) => {
                   )}
                   
                   {submitSuccess && (
-                    <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md">
-                      ¡Gracias por su evaluación!
+                    <div className="mb-4 p-3 bg-green-50 text-green-700 rounded-md flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      ¡Gracias por su evaluación! Se ha registrado correctamente.
                     </div>
                   )}
                   
