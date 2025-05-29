@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiFilter, FiFileText, FiPackage, FiCalendar, FiDollarSign, FiCheckCircle, FiXCircle, FiAlertCircle, FiRefreshCw, FiEye } from 'react-icons/fi';
 import { useApp } from '../hooks/useApp';
 import { useAuth } from '../hooks/useAuth';
+import ServiceDetailModal from '../components/services/ServiceDetailModal';
 
 const MyQuotes = () => {
   // Hooks para datos del contexto
@@ -18,6 +19,12 @@ const MyQuotes = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [actionNotes, setActionNotes] = useState('');
+  
+  // Estados para modal de servicio
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
+  const [isLoadingService, setIsLoadingService] = useState(false);
+  const [errorService, setErrorService] = useState(null);
 
   // Mapeo de estados del backend a estados del frontend
   const statusMapping = {
@@ -106,6 +113,32 @@ const MyQuotes = () => {
     setSelectedQuote(quote);
     setActionNotes('');
     setShowRejectModal(true);
+  };
+
+  // Función para obtener datos del servicio y abrir el modal
+  const handleViewService = async (serviceId) => {
+    setIsLoadingService(true);
+    setErrorService(null);
+    try {
+      const response = await fetch(`http://localhost:3001/api/services/${serviceId}`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('No se pudo obtener la información del servicio.');
+      }
+      
+      const data = await response.json();
+      setSelectedService(data.data || data);
+      setShowServiceModal(true);
+    } catch (error) {
+      console.error('Error al obtener detalles del servicio:', error);
+      setErrorService(error.message);
+    } finally {
+      setIsLoadingService(false);
+    }
   };
 
   // Obtener estadísticas rápidas
@@ -403,7 +436,10 @@ const MyQuotes = () => {
                         </>
                       )}
                       {effectiveStatus === 'aprobada' && quote.service && (
-                        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        <button 
+                          onClick={() => handleViewService(quote.service.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
                           <FiPackage />
                           Ver Servicio
                         </button>
@@ -490,6 +526,33 @@ const MyQuotes = () => {
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
               >
                 {isSubmitting[selectedQuote.id] ? 'Rechazando...' : 'Rechazar Cotización'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de detalles del servicio */}
+      {showServiceModal && selectedService && (
+        <ServiceDetailModal
+          service={selectedService}
+          isOpen={showServiceModal}
+          onClose={() => setShowServiceModal(false)}
+        />
+      )}
+      
+      {/* Mensaje de error al cargar servicio */}
+      {errorService && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4 text-red-600">Error</h3>
+            <p className="text-gray-700 mb-4">{errorService}</p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setErrorService(null)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Cerrar
               </button>
             </div>
           </div>
