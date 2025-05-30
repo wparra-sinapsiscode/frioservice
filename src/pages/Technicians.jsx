@@ -33,23 +33,17 @@ const Technicians = () => {
   };
 
   const handleSaveTechnician = async (technicianData) => {
-    console.log('🔥🔥🔥 2. PÁGINA: Datos recibidos del modal:', technicianData);
     try {
       if (editingTechnician) {
         // ACTUALIZAR TÉCNICO EXISTENTE
-        console.log(">>> [TECHNICIANS PAGE] Actualizando técnico:", editingTechnician.id, technicianData);
         await updateTechnician(editingTechnician.id, technicianData);
-        console.log("✅ [TECHNICIANS PAGE] Técnico actualizado exitosamente");
       } else {
         // CREAR NUEVO TÉCNICO
-        console.log(">>> [TECHNICIANS PAGE] Creando nuevo técnico:", technicianData);
         await addTechnician(technicianData);
-        console.log("✅ [TECHNICIANS PAGE] Técnico creado exitosamente");
       }
       handleCloseModal();
     } catch (error) {
-      console.error("### [TECHNICIANS PAGE] Error al guardar técnico:", error);
-      alert(`Error al guardar técnico: ${error.message}`);
+      alert(`Error al guardar técnico: ${error.message || "Error desconocido"}`);
     }
   };
 
@@ -68,12 +62,9 @@ const Technicians = () => {
     
     if (window.confirm(`¿Estás seguro de que quieres eliminar a ${technicianName}?\n\nEsta acción eliminará:\n- El perfil del técnico\n- Su usuario asociado\n- NO se puede deshacer`)) {
       try {
-        console.log(">>> [TECHNICIANS PAGE] Eliminando técnico:", technician.id);
         await deleteTechnician(technician.id);
-        console.log("✅ [TECHNICIANS PAGE] Técnico eliminado exitosamente");
       } catch (error) {
-        console.error("### [TECHNICIANS PAGE] Error al eliminar técnico:", error);
-        alert(`Error al eliminar técnico: ${error.message}`);
+        alert(`Error al eliminar técnico: ${error.message || "Error desconocido"}`);
       }
     }
   };

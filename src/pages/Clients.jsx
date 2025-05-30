@@ -58,7 +58,6 @@ const Clients = () => {
 
     if (!user || !user.id) {
       alert("Error de sesión: No se pudo obtener el ID del usuario. Por favor, inicie sesión de nuevo.");
-      console.error("Intento de guardar cliente sin user.id:", user);
       return;
     }
 
@@ -120,8 +119,7 @@ const Clients = () => {
       }
       handleCloseModal();
     } catch (error) {
-      console.error("Falló al guardar el cliente:", error);
-      alert(error.message);
+      alert(error.message || "Error al guardar el cliente");
     }
   };
 
@@ -130,7 +128,6 @@ const Clients = () => {
       try {
         await deleteClient(client.id);
       } catch (error) {
-        console.error("Falló al eliminar el cliente:", error);
         alert(error.message || "Error al eliminar cliente.");
       }
     }
@@ -139,10 +136,8 @@ const Clients = () => {
   const handleToggleClientStatus = async (clientId, newStatus) => {
     try {
       await updateClientStatus(clientId, newStatus);
-      console.log(`✅ Cliente ${newStatus ? 'activado' : 'desactivado'} exitosamente`);
     } catch (error) {
-      console.error("Error al cambiar estado:", error);
-      alert(`Error al cambiar estado: ${error.message}`);
+      alert(`Error al cambiar estado: ${error.message || "Error desconocido"}`);
     }
   };
 

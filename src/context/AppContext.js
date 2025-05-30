@@ -91,17 +91,10 @@ export const AppProvider = ({ children }) => {
 
   // 4.1. EFECTO PARA CARGAR TÉCNICOS DESDE LA API
   const WorkspaceTechnicians = useCallback(async () => {
-    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Token en sessionStorage:', sessionStorage.getItem('currentUser'));
-    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - User object completo:', JSON.stringify(user, null, 2));
-    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - User role:', user?.role);
-    console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - User token length:', user?.token?.length);
-    
     if (user?.token) {
       setIsLoadingTechnicians(true);
       setErrorTechnicians(null);
       try {
-        console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Authorization header:', `Bearer ${user.token}`);
-        
         const response = await fetch('http://localhost:3001/api/technicians', {
           headers: {
             'Authorization': `Bearer ${user.token}`,
@@ -109,29 +102,19 @@ export const AppProvider = ({ children }) => {
           }
         });
         
-        console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Response status:', response.status);
-        console.log('🚨🚨🚨 DEBUGING FETCH TECHNICIANS - Response ok:', response.ok);
-        
         if (response.status === 403) {
-          console.error('🚨🚨🚨 ERROR 403: El usuario no tiene permisos para acceder a técnicos');
-          console.error('🚨🚨🚨 Usuario actual:', user?.role);
-          console.error('🚨🚨🚨 Permisos requeridos: ADMIN únicamente');
           throw new Error(`Acceso denegado: No tienes permisos para ver técnicos. Tu rol actual es: ${user?.role || 'desconocido'}. Se requiere rol ADMIN.`);
         }
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('🚨🚨🚨 Error response body:', errorText);
           throw new Error(`Error ${response.status}: ${errorText || 'No se pudo obtener la lista de técnicos.'}`);
         }
         const responseData = await response.json();
-        console.log(">>> RESPUESTA COMPLETA DE TÉCNICOS:", JSON.stringify(responseData, null, 2));
         // Extraer técnicos basándose en la estructura del backend (igual que clientes)
         const techniciansArray = Array.isArray(responseData.data) ? responseData.data : [];
-        console.log(">>> TÉCNICOS EXTRAÍDOS:", techniciansArray.length, "técnicos encontrados");
         setTechnicians(techniciansArray);
       } catch (err) {
-        console.error("Error en WorkspaceTechnicians:", err);
         setErrorTechnicians(err.message);
       } finally {
         setIsLoadingTechnicians(false);
@@ -148,11 +131,6 @@ export const AppProvider = ({ children }) => {
 
   // 4.2. EFECTO PARA CARGAR COTIZACIONES DESDE LA API
   const fetchQuotes = useCallback(async (filters = {}) => {
-    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Token en sessionStorage:', sessionStorage.getItem('currentUser'));
-    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - User object completo:', JSON.stringify(user, null, 2));
-    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - User role:', user?.role);
-    console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - User token length:', user?.token?.length);
-    
     if (user?.token) {
       setIsLoadingQuotes(true);
       setErrorQuotes(null);
@@ -166,9 +144,6 @@ export const AppProvider = ({ children }) => {
         const queryString = queryParams.toString();
         const url = `http://localhost:3001/api/quotes${queryString ? `?${queryString}` : ''}`;
         
-        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - URL:', url);
-        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Authorization header:', `Bearer ${user.token}`);
-        
         const response = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${user.token}`,
@@ -176,29 +151,19 @@ export const AppProvider = ({ children }) => {
           }
         });
         
-        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Response status:', response.status);
-        console.log('🚨🚨🚨 DEBUGING FETCH QUOTES - Response ok:', response.ok);
-        
         if (response.status === 403) {
-          console.error('🚨🚨🚨 ERROR 403: El usuario no tiene permisos para acceder a cotizaciones');
-          console.error('🚨🚨🚨 Usuario actual:', user?.role);
-          console.error('🚨🚨🚨 Permisos requeridos: ADMIN o TECHNICIAN');
           throw new Error(`Acceso denegado: No tienes permisos para ver cotizaciones. Tu rol actual es: ${user?.role || 'desconocido'}`);
         }
         
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('🚨🚨🚨 Error response body:', errorText);
           throw new Error(`Error ${response.status}: ${errorText || 'No se pudo obtener la lista de cotizaciones.'}`);
         }
         const responseData = await response.json();
-        console.log(">>> RESPUESTA COMPLETA DE COTIZACIONES:", JSON.stringify(responseData, null, 2));
-        // Extraer cotizaciones basándose en la estructura del backend (igual que clientes/técnicos)
+        // Extraer cotizaciones basándose en la estructura del backend
         const quotesArray = Array.isArray(responseData.data) ? responseData.data : [];
-        console.log(">>> COTIZACIONES EXTRAÍDAS:", quotesArray.length, "cotizaciones encontradas");
         setQuotes(quotesArray);
       } catch (err) {
-        console.error("Error en fetchQuotes:", err);
         setErrorQuotes(err.message);
       } finally {
         setIsLoadingQuotes(false);
@@ -241,13 +206,10 @@ export const AppProvider = ({ children }) => {
           throw new Error('No se pudo obtener la lista de servicios.');
         }
         const responseData = await response.json();
-        console.log(">>> RESPUESTA COMPLETA DE SERVICIOS:", JSON.stringify(responseData, null, 2));
         // Extraer servicios basándose en la estructura del backend
         const servicesArray = Array.isArray(responseData.data) ? responseData.data : [];
-        console.log(">>> SERVICIOS EXTRAÍDOS:", servicesArray.length, "servicios encontrados");
         setServices(servicesArray);
       } catch (err) {
-        console.error("Error en fetchServices:", err);
         setErrorServices(err.message);
       } finally {
         setIsLoadingServices(false);
@@ -287,13 +249,10 @@ export const AppProvider = ({ children }) => {
           throw new Error('No se pudo obtener la lista de equipos.');
         }
         const responseData = await response.json();
-        console.log(">>> RESPUESTA COMPLETA DE EQUIPOS:", JSON.stringify(responseData, null, 2));
         // Extraer equipos basándose en la estructura del backend
         const equipmentArray = Array.isArray(responseData.data) ? responseData.data : [];
-        console.log(">>> EQUIPOS EXTRAÍDOS:", equipmentArray.length, "equipos encontrados");
         setEquipment(equipmentArray);
       } catch (err) {
-        console.error("Error en fetchEquipment:", err);
         setErrorEquipment(err.message);
       } finally {
         setIsLoadingEquipment(false);
@@ -313,8 +272,6 @@ export const AppProvider = ({ children }) => {
   const addClient = useCallback(async (clientData) => {
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS ENVIADOS AL BACKEND:", JSON.stringify(clientData, null, 2));
-
       const response = await fetch('http://localhost:3001/api/clients', {
         method: 'POST',
         headers: {
@@ -326,7 +283,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND:", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -341,20 +297,13 @@ export const AppProvider = ({ children }) => {
       // Si la creación fue exitosa (ej. response.status === 201)
       const newClientResponse = await response.json();
 
-      // CONSOLE LOGS PARA VER LA ESTRUCTURA DE newClientResponse
-      console.log("✅ CLIENTE CREADO - RESPUESTA DEL BACKEND:", JSON.stringify(newClientResponse, null, 2));
-
-      // ESTA LÍNEA ES CRUCIAL PARA ACTUALIZAR EL ESTADO
       // Asumimos que el objeto cliente real está en newClientResponse.data
-      // basado en cómo tu backend devuelve las listas y objetos individuales.
+      // basado en cómo el backend devuelve las listas y objetos individuales.
       const clientToAdd = newClientResponse.data ? newClientResponse.data : newClientResponse;
-
-      console.log("✅ CLIENTE A AÑADIR AL ESTADO:", JSON.stringify(clientToAdd, null, 2));
 
       if (clientToAdd && clientToAdd.id) { // Nos aseguramos que el objeto tenga un ID
         setClients(prevClients => [clientToAdd, ...prevClients]); // <-- Aquí actualizas el estado
       } else {
-        console.error("El objeto clientToAdd no es válido o no tiene ID para añadirlo al estado local:", clientToAdd);
         // Como fallback, recargamos toda la lista.
         // Esto asegura que, aunque la adición optimista falle, el usuario vea el nuevo cliente.
         fetchClients();
@@ -362,7 +311,6 @@ export const AppProvider = ({ children }) => {
       return clientToAdd;
 
     } catch (error) {
-      console.error("Error detallado en addClient:", error.message);
       throw error;
     }
   }, [user, fetchClients]); // Añadimos fetchClients a las dependencias
@@ -370,8 +318,6 @@ export const AppProvider = ({ children }) => {
   const updateClient = useCallback(async (clientId, clientDataToUpdate) => {
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND:", JSON.stringify({ clientId, ...clientDataToUpdate }, null, 2));
-
       const response = await fetch(`http://localhost:3001/api/clients/${clientId}`, {
         method: 'PUT',
         headers: {
@@ -383,7 +329,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -396,23 +341,18 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedClientResponse = await response.json();
-      console.log("✅ CLIENTE ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedClientResponse, null, 2));
-
       const clientToUpdateInState = updatedClientResponse.data ? updatedClientResponse.data : updatedClientResponse;
-      console.log("✅ CLIENTE A ACTUALIZAR EN EL ESTADO:", JSON.stringify(clientToUpdateInState, null, 2));
 
       if (clientToUpdateInState && clientToUpdateInState.id) {
         setClients(prevClients =>
           prevClients.map(c => (c.id === clientId ? clientToUpdateInState : c))
         );
       } else {
-        console.error("El objeto clientToUpdateInState no es válido o no tiene ID:", clientToUpdateInState);
         fetchClients(); 
       }
       return clientToUpdateInState;
 
     } catch (error) {
-      console.error("Error detallado en updateClient:", error.message);
       throw error;
     }
   }, [user, fetchClients]); 
@@ -427,13 +367,11 @@ export const AppProvider = ({ children }) => {
         }
       });
       if (!response.ok) {
-        // Podrías añadir el mismo manejo de error detallado
         const errorData = await response.json();
         throw new Error(errorData.message || 'Error al eliminar el cliente.');
       }
       setClients(prev => prev.filter(c => c.id !== clientId));
     } catch (error) {
-      console.error("Error en deleteClient:", error);
       throw error;
     }
   }, [user]);
@@ -441,8 +379,6 @@ export const AppProvider = ({ children }) => {
   const updateClientStatus = useCallback(async (clientId, newStatus) => {
     if (!user?.token) return;
     try {
-      console.log(">>> Actualizando estado del cliente:", clientId, "a", newStatus ? 'ACTIVE' : 'INACTIVE');
-      
       const response = await fetch(`http://localhost:3001/api/clients/${clientId}/status`, {
         method: 'PATCH',
         headers: {
@@ -460,7 +396,6 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedClientResponse = await response.json();
-      console.log("✅ ESTADO DEL CLIENTE ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedClientResponse, null, 2));
       
       // Actualizar estado local optimísticamente
       setClients(prevClients =>
@@ -473,18 +408,14 @@ export const AppProvider = ({ children }) => {
       
       return updatedClientResponse;
     } catch (error) {
-      console.error("Error en updateClientStatus:", error);
       throw error;
     }
   }, [user]);
 
   // 5.1. FUNCIONES CRUD PARA TÉCNICOS
   const addTechnician = useCallback(async (technicianData) => {
-    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API:', technicianData);
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS ENVIADOS AL BACKEND (TÉCNICOS):", JSON.stringify(technicianData, null, 2));
-
       const response = await fetch('http://localhost:3001/api/technicians', {
         method: 'POST',
         headers: {
@@ -496,7 +427,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (TÉCNICOS):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -509,22 +439,18 @@ export const AppProvider = ({ children }) => {
       }
 
       const newTechnicianResponse = await response.json();
-      console.log("✅ TÉCNICO CREADO - RESPUESTA DEL BACKEND:", JSON.stringify(newTechnicianResponse, null, 2));
 
       // El backend devuelve directamente el técnico creado
       const technicianToAdd = newTechnicianResponse.data ? newTechnicianResponse.data : newTechnicianResponse;
-      console.log("✅ TÉCNICO A AÑADIR AL ESTADO:", JSON.stringify(technicianToAdd, null, 2));
 
       if (technicianToAdd && technicianToAdd.id) {
         setTechnicians(prevTechnicians => [technicianToAdd, ...prevTechnicians]);
       } else {
-        console.error("El objeto technicianToAdd no es válido o no tiene ID:", technicianToAdd);
         WorkspaceTechnicians(); // Recarga la lista como fallback
       }
       return technicianToAdd;
 
     } catch (error) {
-      console.error("Error detallado en addTechnician:", error.message);
       throw error;
     }
   }, [user, WorkspaceTechnicians]);
@@ -532,8 +458,6 @@ export const AppProvider = ({ children }) => {
   const updateTechnician = useCallback(async (technicianId, technicianDataToUpdate) => {
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (TÉCNICOS):", JSON.stringify({ technicianId, ...technicianDataToUpdate }, null, 2));
-
       const response = await fetch(`http://localhost:3001/api/technicians/${technicianId}`, {
         method: 'PUT',
         headers: {
@@ -545,7 +469,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE TÉCNICOS):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -558,23 +481,19 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedTechnicianResponse = await response.json();
-      console.log("✅ TÉCNICO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedTechnicianResponse, null, 2));
 
       const technicianToUpdateInState = updatedTechnicianResponse.data ? updatedTechnicianResponse.data : updatedTechnicianResponse;
-      console.log("✅ TÉCNICO A ACTUALIZAR EN EL ESTADO:", JSON.stringify(technicianToUpdateInState, null, 2));
 
       if (technicianToUpdateInState && technicianToUpdateInState.id) {
         setTechnicians(prevTechnicians =>
           prevTechnicians.map(t => (t.id === technicianId ? technicianToUpdateInState : t))
         );
       } else {
-        console.error("El objeto technicianToUpdateInState no es válido o no tiene ID:", technicianToUpdateInState);
         WorkspaceTechnicians(); // Recarga como fallback
       }
       return technicianToUpdateInState;
 
     } catch (error) {
-      console.error("Error detallado en updateTechnician:", error.message);
       throw error;
     }
   }, [user, WorkspaceTechnicians]);
@@ -592,21 +511,16 @@ export const AppProvider = ({ children }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Error al eliminar el técnico.');
       }
-      console.log("✅ TÉCNICO ELIMINADO CON ID:", technicianId);
       setTechnicians(prev => prev.filter(t => t.id !== technicianId));
     } catch (error) {
-      console.error("Error en deleteTechnician:", error);
       throw error;
     }
   }, [user]);
 
   // 5.2. FUNCIONES CRUD PARA COTIZACIONES
   const addQuote = useCallback(async (quoteData) => {
-    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API (COTIZACIONES):', quoteData);
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS ENVIADOS AL BACKEND (COTIZACIONES):", JSON.stringify(quoteData, null, 2));
-
       const response = await fetch('http://localhost:3001/api/quotes', {
         method: 'POST',
         headers: {
@@ -618,7 +532,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (COTIZACIONES):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -631,22 +544,18 @@ export const AppProvider = ({ children }) => {
       }
 
       const newQuoteResponse = await response.json();
-      console.log("✅ COTIZACIÓN CREADA - RESPUESTA DEL BACKEND:", JSON.stringify(newQuoteResponse, null, 2));
 
       // El backend devuelve directamente la cotización creada
       const quoteToAdd = newQuoteResponse.data ? newQuoteResponse.data : newQuoteResponse;
-      console.log("✅ COTIZACIÓN A AÑADIR AL ESTADO:", JSON.stringify(quoteToAdd, null, 2));
 
       if (quoteToAdd && quoteToAdd.id) {
         setQuotes(prevQuotes => [quoteToAdd, ...prevQuotes]);
       } else {
-        console.error("El objeto quoteToAdd no es válido o no tiene ID:", quoteToAdd);
         fetchQuotes(); // Recarga la lista como fallback
       }
       return quoteToAdd;
 
     } catch (error) {
-      console.error("Error detallado en addQuote:", error.message);
       throw error;
     }
   }, [user, fetchQuotes]);
@@ -654,8 +563,6 @@ export const AppProvider = ({ children }) => {
   const updateQuote = useCallback(async (quoteId, quoteDataToUpdate) => {
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (COTIZACIONES):", JSON.stringify({ quoteId, ...quoteDataToUpdate }, null, 2));
-
       const response = await fetch(`http://localhost:3001/api/quotes/${quoteId}`, {
         method: 'PUT',
         headers: {
@@ -667,7 +574,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE COTIZACIONES):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -680,23 +586,19 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedQuoteResponse = await response.json();
-      console.log("✅ COTIZACIÓN ACTUALIZADA - RESPUESTA DEL BACKEND:", JSON.stringify(updatedQuoteResponse, null, 2));
 
       const quoteToUpdateInState = updatedQuoteResponse.data ? updatedQuoteResponse.data : updatedQuoteResponse;
-      console.log("✅ COTIZACIÓN A ACTUALIZAR EN EL ESTADO:", JSON.stringify(quoteToUpdateInState, null, 2));
 
       if (quoteToUpdateInState && quoteToUpdateInState.id) {
         setQuotes(prevQuotes =>
           prevQuotes.map(q => (q.id === quoteId ? quoteToUpdateInState : q))
         );
       } else {
-        console.error("El objeto quoteToUpdateInState no es válido o no tiene ID:", quoteToUpdateInState);
         fetchQuotes(); // Recarga como fallback
       }
       return quoteToUpdateInState;
 
     } catch (error) {
-      console.error("Error detallado en updateQuote:", error.message);
       throw error;
     }
   }, [user, fetchQuotes]);
@@ -714,10 +616,8 @@ export const AppProvider = ({ children }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Error al eliminar la cotización.');
       }
-      console.log("✅ COTIZACIÓN ELIMINADA CON ID:", quoteId);
       setQuotes(prev => prev.filter(q => q.id !== quoteId));
     } catch (error) {
-      console.error("Error en deleteQuote:", error);
       throw error;
     }
   }, [user]);
@@ -725,8 +625,6 @@ export const AppProvider = ({ children }) => {
   const approveQuote = useCallback(async (quoteId, notes = '') => {
     if (!user?.token) return;
     try {
-      console.log(">>> Aprobando cotización:", quoteId, "con notas:", notes);
-      
       const response = await fetch(`http://localhost:3001/api/quotes/${quoteId}/approve`, {
         method: 'POST',
         headers: {
@@ -742,7 +640,6 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedQuoteResponse = await response.json();
-      console.log("✅ COTIZACIÓN APROBADA - RESPUESTA DEL BACKEND:", JSON.stringify(updatedQuoteResponse, null, 2));
       
       // Actualizar estado local
       const quoteToUpdate = updatedQuoteResponse.data ? updatedQuoteResponse.data : updatedQuoteResponse;
@@ -754,7 +651,6 @@ export const AppProvider = ({ children }) => {
       
       return updatedQuoteResponse;
     } catch (error) {
-      console.error("Error en approveQuote:", error);
       throw error;
     }
   }, [user]);
@@ -762,8 +658,6 @@ export const AppProvider = ({ children }) => {
   const rejectQuote = useCallback(async (quoteId, notes = '') => {
     if (!user?.token) return;
     try {
-      console.log(">>> Rechazando cotización:", quoteId, "con notas:", notes);
-      
       const response = await fetch(`http://localhost:3001/api/quotes/${quoteId}/reject`, {
         method: 'POST',
         headers: {
@@ -779,7 +673,6 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedQuoteResponse = await response.json();
-      console.log("✅ COTIZACIÓN RECHAZADA - RESPUESTA DEL BACKEND:", JSON.stringify(updatedQuoteResponse, null, 2));
       
       // Actualizar estado local
       const quoteToUpdate = updatedQuoteResponse.data ? updatedQuoteResponse.data : updatedQuoteResponse;
@@ -791,25 +684,20 @@ export const AppProvider = ({ children }) => {
       
       return updatedQuoteResponse;
     } catch (error) {
-      console.error("Error en rejectQuote:", error);
       throw error;
     }
   }, [user]);
 
   // 5.3. FUNCIONES CRUD PARA SERVICIOS
   const addService = useCallback(async (serviceData) => {
-    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API (SERVICIOS):', serviceData);
     if (!user?.token) return;
     try {
       // Preparar datos para envío - para CLIENTs quitar clientId (se asigna automáticamente en backend)
       const dataToSend = {...serviceData};
       if (user?.role === 'CLIENT' && 'clientId' in dataToSend) {
         delete dataToSend.clientId;
-        console.log('🔥🔥🔥 CLIENT USER: Removiendo clientId del payload, será asignado automáticamente por el backend');
       }
       
-      console.log(">>>>> DATOS ENVIADOS AL BACKEND (SERVICIOS):", JSON.stringify(dataToSend, null, 2));
-
       const response = await fetch('http://localhost:3001/api/services', {
         method: 'POST',
         headers: {
@@ -821,7 +709,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (SERVICIOS):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -834,22 +721,18 @@ export const AppProvider = ({ children }) => {
       }
 
       const newServiceResponse = await response.json();
-      console.log("✅ SERVICIO CREADO - RESPUESTA DEL BACKEND:", JSON.stringify(newServiceResponse, null, 2));
 
       // El backend devuelve directamente el servicio creado
       const serviceToAdd = newServiceResponse.data ? newServiceResponse.data : newServiceResponse;
-      console.log("✅ SERVICIO A AÑADIR AL ESTADO:", JSON.stringify(serviceToAdd, null, 2));
 
       if (serviceToAdd && serviceToAdd.id) {
         setServices(prevServices => [serviceToAdd, ...prevServices]);
       } else {
-        console.error("El objeto serviceToAdd no es válido o no tiene ID:", serviceToAdd);
         fetchServices(); // Recarga la lista como fallback
       }
       return serviceToAdd;
 
     } catch (error) {
-      console.error("Error detallado en addService:", error.message);
       throw error;
     }
   }, [user, fetchServices]);
@@ -857,8 +740,6 @@ export const AppProvider = ({ children }) => {
   const updateService = useCallback(async (serviceId, serviceDataToUpdate) => {
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (SERVICIOS):", JSON.stringify({ serviceId, ...serviceDataToUpdate }, null, 2));
-
       const response = await fetch(`http://localhost:3001/api/services/${serviceId}`, {
         method: 'PUT',
         headers: {
@@ -870,7 +751,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE SERVICIOS):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -883,23 +763,19 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedServiceResponse = await response.json();
-      console.log("✅ SERVICIO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
 
       const serviceToUpdateInState = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
-      console.log("✅ SERVICIO A ACTUALIZAR EN EL ESTADO:", JSON.stringify(serviceToUpdateInState, null, 2));
 
       if (serviceToUpdateInState && serviceToUpdateInState.id) {
         setServices(prevServices =>
           prevServices.map(s => (s.id === serviceId ? serviceToUpdateInState : s))
         );
       } else {
-        console.error("El objeto serviceToUpdateInState no es válido o no tiene ID:", serviceToUpdateInState);
         fetchServices(); // Recarga como fallback
       }
       return serviceToUpdateInState;
 
     } catch (error) {
-      console.error("Error detallado en updateService:", error.message);
       throw error;
     }
   }, [user, fetchServices]);
@@ -917,10 +793,8 @@ export const AppProvider = ({ children }) => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Error al eliminar el servicio.');
       }
-      console.log("✅ SERVICIO ELIMINADO CON ID:", serviceId);
       setServices(prev => prev.filter(s => s.id !== serviceId));
     } catch (error) {
-      console.error("Error en deleteService:", error);
       throw error;
     }
   }, [user]);
@@ -929,8 +803,6 @@ export const AppProvider = ({ children }) => {
   const assignTechnician = useCallback(async (serviceId, technicianId) => {
     if (!user?.token) return;
     try {
-      console.log(">>> Asignando técnico:", technicianId, "al servicio:", serviceId);
-      
       const response = await fetch(`http://localhost:3001/api/services/${serviceId}/assign`, {
         method: 'POST',
         headers: {
@@ -946,7 +818,6 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedServiceResponse = await response.json();
-      console.log("✅ TÉCNICO ASIGNADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
       
       // Actualizar estado local
       const serviceToUpdate = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
@@ -958,7 +829,6 @@ export const AppProvider = ({ children }) => {
       
       return updatedServiceResponse;
     } catch (error) {
-      console.error("Error en assignTechnician:", error);
       throw error;
     }
   }, [user]);
@@ -966,14 +836,6 @@ export const AppProvider = ({ children }) => {
   const completeService = useCallback(async (serviceId, completionData) => {
     if (!user?.token) return;
     try {
-      console.log('=== COMPLETANDO SERVICIO ===');
-      console.log('Service ID:', serviceId);
-      console.log('Completion Data:', JSON.stringify(completionData, null, 2));
-      console.log('Headers:', {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user.token.substring(0, 20)}...`
-      });
-      
       const response = await fetch(`http://localhost:3001/api/services/${serviceId}/complete`, {
         method: 'PATCH',
         headers: {
@@ -983,25 +845,18 @@ export const AppProvider = ({ children }) => {
         body: JSON.stringify(completionData)
       });
 
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('❌ Error Response Body (raw):', errorText);
         
         try {
           const errorJson = JSON.parse(errorText);
-          console.log('❌ Error parseado:', errorJson);
           throw new Error(errorJson.message || `Error ${response.status}: ${response.statusText}`);
         } catch (parseError) {
-          console.log('❌ Error no es JSON válido:', errorText);
           throw new Error(`Error ${response.status}: ${errorText}`);
         }
       }
 
       const updatedServiceResponse = await response.json();
-      console.log("✅ SERVICIO COMPLETADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
       
       // Actualizar estado local
       const serviceToUpdate = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
@@ -1013,7 +868,6 @@ export const AppProvider = ({ children }) => {
       
       return updatedServiceResponse;
     } catch (error) {
-      console.error("Error en completeService:", error);
       throw error;
     }
   }, [user]);
@@ -1021,8 +875,6 @@ export const AppProvider = ({ children }) => {
   const updateServiceStatus = useCallback(async (serviceId, newStatus) => {
     if (!user?.token) return;
     try {
-      console.log(">>> Actualizando estado del servicio:", serviceId, "a", newStatus);
-      
       const response = await fetch(`http://localhost:3001/api/services/${serviceId}`, {
         method: 'PUT',
         headers: {
@@ -1038,7 +890,6 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedServiceResponse = await response.json();
-      console.log("✅ ESTADO DEL SERVICIO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedServiceResponse, null, 2));
       
       // Actualizar estado local
       const serviceToUpdate = updatedServiceResponse.data ? updatedServiceResponse.data : updatedServiceResponse;
@@ -1050,25 +901,20 @@ export const AppProvider = ({ children }) => {
       
       return updatedServiceResponse;
     } catch (error) {
-      console.error("Error en updateServiceStatus:", error);
       throw error;
     }
   }, [user]);
 
   // 5.3. FUNCIONES CRUD PARA EQUIPOS
   const addEquipment = useCallback(async (equipmentData) => {
-    console.log('🔥🔥🔥 3. CONTEXTO: Datos recibidos para enviar a la API (EQUIPOS):', equipmentData);
     if (!user?.token) return;
     try {
       // Preparar datos para envío - para CLIENTs quitar clientId (se asigna automáticamente en backend)
       const dataToSend = {...equipmentData};
       if (user?.role === 'CLIENT' && 'clientId' in dataToSend) {
         delete dataToSend.clientId;
-        console.log('🔥🔥🔥 CLIENT USER: Removiendo clientId del payload, será asignado automáticamente por el backend');
       }
       
-      console.log(">>>>> DATOS ENVIADOS AL BACKEND (EQUIPOS):", JSON.stringify(dataToSend, null, 2));
-
       const response = await fetch('http://localhost:3001/api/equipment', {
         method: 'POST',
         headers: {
@@ -1080,7 +926,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (EQUIPOS):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -1093,22 +938,18 @@ export const AppProvider = ({ children }) => {
       }
 
       const newEquipmentResponse = await response.json();
-      console.log("✅ EQUIPO CREADO - RESPUESTA DEL BACKEND:", JSON.stringify(newEquipmentResponse, null, 2));
 
       // El backend devuelve directamente el equipo creado
       const equipmentToAdd = newEquipmentResponse.data ? newEquipmentResponse.data : newEquipmentResponse;
-      console.log("✅ EQUIPO A AÑADIR AL ESTADO:", JSON.stringify(equipmentToAdd, null, 2));
 
       if (equipmentToAdd && equipmentToAdd.id) {
         setEquipment(prevEquipment => [equipmentToAdd, ...prevEquipment]);
       } else {
-        console.error("El objeto equipmentToAdd no es válido o no tiene ID:", equipmentToAdd);
         fetchEquipment(); // Recarga la lista como fallback
       }
       return equipmentToAdd;
 
     } catch (error) {
-      console.error("Error detallado en addEquipment:", error.message);
       throw error;
     }
   }, [user, fetchEquipment]);
@@ -1116,8 +957,6 @@ export const AppProvider = ({ children }) => {
   const updateEquipment = useCallback(async (equipmentId, equipmentDataToUpdate) => {
     if (!user?.token) return;
     try {
-      console.log(">>>>> DATOS DE ACTUALIZACIÓN ENVIADOS AL BACKEND (EQUIPOS):", JSON.stringify({ equipmentId, ...equipmentDataToUpdate }, null, 2));
-
       const response = await fetch(`http://localhost:3001/api/equipment/${equipmentId}`, {
         method: 'PUT',
         headers: {
@@ -1129,7 +968,6 @@ export const AppProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log("@@@ RESPUESTA COMPLETA DEL ERROR DEL BACKEND (UPDATE EQUIPOS):", errorData);
         let detailedErrorMessage = 'El servidor no especificó el error.';
         if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
           detailedErrorMessage = errorData.errors.map(err => `${err.field}: ${err.message}`).join('\n');
@@ -1142,44 +980,27 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedEquipmentResponse = await response.json();
-      console.log("✅ EQUIPO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedEquipmentResponse, null, 2));
 
       const equipmentToUpdateInState = updatedEquipmentResponse.data ? updatedEquipmentResponse.data : updatedEquipmentResponse;
-      console.log("✅ EQUIPO A ACTUALIZAR EN EL ESTADO:", JSON.stringify(equipmentToUpdateInState, null, 2));
 
       if (equipmentToUpdateInState && equipmentToUpdateInState.id) {
         setEquipment(prevEquipment =>
           prevEquipment.map(e => (e.id === equipmentId ? equipmentToUpdateInState : e))
         );
       } else {
-        console.error("El objeto equipmentToUpdateInState no es válido o no tiene ID:", equipmentToUpdateInState);
         fetchEquipment(); // Recarga como fallback
       }
       return equipmentToUpdateInState;
 
     } catch (error) {
-      console.error("Error detallado en updateEquipment:", error.message);
       throw error;
     }
   }, [user, fetchEquipment]);
 
   const deleteEquipment = useCallback(async (equipmentId) => {
-    console.log('🔥 DELETE - AppContext deleteEquipment called with ID:', equipmentId);
-    console.log('🔥 DELETE - User object:', user);
-    console.log('🔥 DELETE - Token exists:', !!user?.token);
-    console.log('🔥 DELETE - Token preview:', user?.token?.substring(0, 20) + '...');
-    
-    if (!user?.token) {
-      console.log('🔥 DELETE - No token available, returning');
-      return;
-    }
-    
+    if (!user?.token) return;
     try {
       const url = `http://localhost:3001/api/equipment/${equipmentId}`;
-      console.log('🔥 DELETE - URL completa:', url);
-      console.log('🔥 DELETE - Headers enviados:', {
-        'Authorization': `Bearer ${user.token.substring(0, 20)}...`
-      });
       
       const response = await fetch(url, {
         method: 'DELETE',
@@ -1188,24 +1009,14 @@ export const AppProvider = ({ children }) => {
         }
       });
       
-      console.log('🔥 DELETE - Response status:', response.status);
-      console.log('🔥 DELETE - Response ok:', response.ok);
-      
       if (!response.ok) {
         const errorData = await response.json();
-        console.log('🔥 DELETE - Error response completo:', errorData);
-        console.log('🔥 DELETE - Error message:', errorData.message);
         throw new Error(errorData.message || 'Error al eliminar el equipo.');
       }
       
       const successData = await response.json();
-      console.log('🔥 DELETE - Success response:', successData);
-      console.log("✅ EQUIPO ELIMINADO CON ID:", equipmentId);
       setEquipment(prev => prev.filter(e => e.id !== equipmentId));
     } catch (error) {
-      console.error("🔥 DELETE - Error en deleteEquipment:", error);
-      console.error("🔥 DELETE - Error message:", error.message);
-      console.error("🔥 DELETE - Error stack:", error.stack);
       throw error;
     }
   }, [user]);
@@ -1213,8 +1024,6 @@ export const AppProvider = ({ children }) => {
   const updateEquipmentStatus = useCallback(async (equipmentId, newStatus) => {
     if (!user?.token) return;
     try {
-      console.log(">>> Actualizando estado del equipo:", equipmentId, "a", newStatus);
-      
       const response = await fetch(`http://localhost:3001/api/equipment/${equipmentId}/status`, {
         method: 'PATCH',
         headers: {
@@ -1232,7 +1041,6 @@ export const AppProvider = ({ children }) => {
       }
 
       const updatedEquipmentResponse = await response.json();
-      console.log("✅ ESTADO DEL EQUIPO ACTUALIZADO - RESPUESTA DEL BACKEND:", JSON.stringify(updatedEquipmentResponse, null, 2));
       
       // Actualizar estado local optimísticamente
       setEquipment(prevEquipment =>
@@ -1245,15 +1053,12 @@ export const AppProvider = ({ children }) => {
       
       return updatedEquipmentResponse;
     } catch (error) {
-      console.error("Error en updateEquipmentStatus:", error);
       throw error;
     }
   }, [user]);
 
   // 5.4. FUNCIONES PARA ESTADÍSTICAS
   const fetchDashboardStats = useCallback(async () => {
-    console.log('🔥🔥🔥 STATS: Obteniendo estadísticas del dashboard');
-    
     // Solo cargar estadísticas si el usuario es ADMIN
     if (user?.token && user?.role === 'ADMIN') {
       setIsLoadingDashboard(true);
@@ -1272,13 +1077,11 @@ export const AppProvider = ({ children }) => {
         }
         
         const responseData = await response.json();
-        console.log(">>> ESTADÍSTICAS DEL DASHBOARD:", JSON.stringify(responseData, null, 2));
         
         const statsData = responseData.data || responseData;
         setDashboardStats(statsData);
         
       } catch (err) {
-        console.error("Error en fetchDashboardStats:", err);
         setErrorDashboard(err.message);
       } finally {
         setIsLoadingDashboard(false);
@@ -1292,8 +1095,6 @@ export const AppProvider = ({ children }) => {
   }, [user]);
 
   const fetchServiceStats = useCallback(async (filters = {}) => {
-    console.log('🔥🔥🔥 STATS: Obteniendo estadísticas de servicios', filters);
-    
     if (user?.token && user?.role === 'ADMIN') {
       setIsLoadingServiceStats(true);
       setErrorServiceStats(null);
@@ -1321,13 +1122,11 @@ export const AppProvider = ({ children }) => {
         }
         
         const responseData = await response.json();
-        console.log(">>> ESTADÍSTICAS DE SERVICIOS:", JSON.stringify(responseData, null, 2));
         
         const statsData = responseData.data || responseData;
         setServiceStats(statsData);
         
       } catch (err) {
-        console.error("Error en fetchServiceStats:", err);
         setErrorServiceStats(err.message);
       } finally {
         setIsLoadingServiceStats(false);
@@ -1340,8 +1139,6 @@ export const AppProvider = ({ children }) => {
   }, [user]);
 
   const fetchIncomeStats = useCallback(async (period = 'month') => {
-    console.log('🔥🔥🔥 STATS: Obteniendo estadísticas de ingresos', period);
-    
     if (user?.token && user?.role === 'ADMIN') {
       setIsLoadingIncomeStats(true);
       setErrorIncomeStats(null);
@@ -1359,13 +1156,11 @@ export const AppProvider = ({ children }) => {
         }
         
         const responseData = await response.json();
-        console.log(">>> ESTADÍSTICAS DE INGRESOS:", JSON.stringify(responseData, null, 2));
         
         const statsData = responseData.data || responseData;
         setIncomeStats(statsData);
         
       } catch (err) {
-        console.error("Error en fetchIncomeStats:", err);
         setErrorIncomeStats(err.message);
       } finally {
         setIsLoadingIncomeStats(false);
@@ -1378,8 +1173,6 @@ export const AppProvider = ({ children }) => {
   }, [user]);
 
   const fetchTechnicianRankings = useCallback(async () => {
-    console.log('🔥🔥🔥 STATS: Obteniendo rankings de técnicos');
-    
     if (user?.token && user?.role === 'ADMIN') {
       setIsLoadingTechnicianRankings(true);
       setErrorTechnicianRankings(null);
@@ -1397,13 +1190,11 @@ export const AppProvider = ({ children }) => {
         }
         
         const responseData = await response.json();
-        console.log(">>> RANKINGS DE TÉCNICOS:", JSON.stringify(responseData, null, 2));
         
         const statsData = responseData.data || responseData;
         setTechnicianRankings(statsData);
         
       } catch (err) {
-        console.error("Error en fetchTechnicianRankings:", err);
         setErrorTechnicianRankings(err.message);
       } finally {
         setIsLoadingTechnicianRankings(false);
@@ -1416,8 +1207,6 @@ export const AppProvider = ({ children }) => {
   }, [user]);
 
   const fetchServicesByEquipment = useCallback(async () => {
-    console.log('🔥🔥🔥 STATS: Obteniendo servicios por equipo');
-    
     if (user?.token && user?.role === 'ADMIN') {
       setIsLoadingServicesByEquipment(true);
       setErrorServicesByEquipment(null);
@@ -1435,13 +1224,11 @@ export const AppProvider = ({ children }) => {
         }
         
         const responseData = await response.json();
-        console.log(">>> SERVICIOS POR EQUIPO:", JSON.stringify(responseData, null, 2));
         
         const statsData = responseData.data || responseData;
         setServicesByEquipment(statsData);
         
       } catch (err) {
-        console.error("Error en fetchServicesByEquipment:", err);
         setErrorServicesByEquipment(err.message);
       } finally {
         setIsLoadingServicesByEquipment(false);
