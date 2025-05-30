@@ -68,7 +68,8 @@ const MainLayout = () => {
       >
         <Header toggleSidebar={toggleSidebar} collapsed={collapsed} />
         
-        <main className="pt-[90px] min-h-screen p-3 sm:p-4 md:p-6">
+        {/* Aumentamos el padding superior para evitar superposición con el header */}
+        <main className="pt-[72px] min-h-screen p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
       </div>

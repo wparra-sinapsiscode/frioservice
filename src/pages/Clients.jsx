@@ -188,10 +188,11 @@ const Clients = () => {
         <div>
           <h2 className="text-2xl font-bold m-0">Gestión de Clientes</h2>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 relative z-30">
           <button
-            className="btn btn-primary flex items-center gap-2"
+            className="btn btn-primary flex items-center gap-2 relative z-30"
             onClick={handleNewClient}
+            style={{ zIndex: 30 }}
           >
             <FaPlus /> Nuevo Cliente
           </button>

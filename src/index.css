@@ -47,7 +47,7 @@
   
   .btn-primary {
     @apply bg-gradient-to-r from-accent-600 to-accent-700 hover:from-accent-700 hover:to-accent-800 
-           text-white shadow-lg hover:shadow-xl focus:ring-accent-500;
+           text-white shadow-lg hover:shadow-xl focus:ring-accent-500 relative z-30;
   }
   
   .btn-secondary {
@@ -251,8 +251,8 @@
   
   /* Header Styles */
   .header {
-    @apply fixed top-0 left-0 right-0 h-18 bg-white/80 backdrop-blur-lg shadow-md 
-           flex items-center px-6 z-20 transition-all duration-300 border-b border-gray-200/50;
+    @apply fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-lg shadow-md 
+           flex items-center px-6 z-10 transition-all duration-300 border-b border-gray-200/50;
   }
   
   /* Loading Animations */
