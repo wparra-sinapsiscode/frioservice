@@ -68,7 +68,7 @@ const MainLayout = () => {
       >
         <Header toggleSidebar={toggleSidebar} collapsed={collapsed} />
         
-        <main className="pt-[70px] min-h-screen p-3 sm:p-4 md:p-6">
+        <main className="pt-[90px] min-h-screen p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
       </div>

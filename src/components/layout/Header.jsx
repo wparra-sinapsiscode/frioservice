@@ -29,32 +29,8 @@ const Header = ({ toggleSidebar, collapsed }) => {
         </div>
       </div>
       
-      <div className="ml-auto flex items-center gap-2 sm:gap-4">
-        {/* Notifications - oculto en móviles más pequeños */}
-        <div className="relative hidden sm:block">
-          <button className="p-2 sm:p-3 rounded-xl hover:bg-gray-100 text-gray-600 hover:text-gray-900 cursor-pointer transition-all duration-300 relative">
-            <HiOutlineBell className="w-5 h-5 sm:w-6 sm:h-6" />
-            <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-red-600 text-white w-4 h-4 sm:w-5 sm:h-5 text-xs flex items-center justify-center rounded-full font-semibold animate-pulse">3</span>
-          </button>
-        </div>
-        
-        {/* Messages - oculto en móviles más pequeños */}
-        <div className="relative hidden sm:block">
-          <button className="p-2 sm:p-3 rounded-xl hover:bg-gray-100 text-gray-600 hover:text-gray-900 cursor-pointer transition-all duration-300 relative">
-            <HiOutlineEnvelope className="w-5 h-5 sm:w-6 sm:h-6" />
-            <span className="absolute -top-1 -right-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white w-4 h-4 sm:w-5 sm:h-5 text-xs flex items-center justify-center rounded-full font-semibold">5</span>
-          </button>
-        </div>
-        
-        {/* Profile */}
-        <div className="relative">
-          <button className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100 transition-all duration-300">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-600 flex items-center justify-center shadow-md">
-              <FaUser className="text-white text-sm" />
-            </div>
-          </button>
-        </div>
-      </div>
+      {/* Se han eliminado los tres botones de la esquina superior derecha */}
+      <div className="ml-auto"></div>
     </header>
   );
 };
