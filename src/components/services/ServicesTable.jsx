@@ -203,7 +203,8 @@ const ServicesTable = ({ services, onView, onEdit, onDelete, isLoading }) => {
 
   return (
     <div className="overflow-x-auto w-full">
-      <table className="w-full border-collapse mb-4">
+      {/* Vista de tabla para pantallas medianas y grandes */}
+      <table className="w-full border-collapse mb-4 hidden md:table">
         <thead>
           <tr>
             <th className="py-3 px-4 text-left bg-gray-50 text-gray-700 font-semibold border-b-2 border-gray-200 min-w-[200px]">
@@ -358,6 +359,95 @@ const ServicesTable = ({ services, onView, onEdit, onDelete, isLoading }) => {
           )}
         </tbody>
       </table>
+      
+      {/* Vista de tarjetas para móviles */}
+      <div className="md:hidden space-y-4">
+        {services && services.length > 0 ? (
+          services.map((service, index) => (
+            <div key={service.id || index} className="bg-white rounded-lg shadow-md p-4 border border-gray-200 space-y-3">
+              <div className="flex justify-between items-start">
+                <h3 className="font-medium text-gray-900">{truncateText(service.title, 40)}</h3>
+                {getPriorityIndicator(service.priority)}
+              </div>
+              
+              {service.description && (
+                <p className="text-sm text-gray-500">{truncateText(service.description, 50)}</p>
+              )}
+              
+              <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Cliente:</span>
+                  <p className="text-gray-900">{truncateText(resolveClientName(service.clientId), 25)}</p>
+                </div>
+                
+                <div>
+                  <span className="font-medium text-gray-700">Técnico:</span>
+                  <p className="text-gray-900">{truncateText(resolveTechnicianName(service.technicianId), 20)}</p>
+                </div>
+                
+                <div>
+                  <span className="font-medium text-gray-700">Tipo:</span>
+                  <div className="mt-1">{getTypeBadge(service.type)}</div>
+                </div>
+                
+                <div>
+                  <span className="font-medium text-gray-700">Estado:</span>
+                  <div className="mt-1">{getStatusBadge(service.status)}</div>
+                </div>
+                
+                <div className="col-span-2">
+                  <span className="font-medium text-gray-700">Fecha Programada:</span>
+                  <p className="text-gray-900">{formatDate(service.scheduledDate)}</p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 border-t border-gray-100 pt-3 mt-3">
+                <button 
+                  onClick={() => onView && onView(service)}
+                  className="px-3 py-1.5 rounded-md flex items-center justify-center border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200 text-xs font-medium"
+                  disabled={isLoading}
+                >
+                  <FaEye className="text-blue-600 text-xs mr-1" />
+                  Ver
+                </button>
+                <button 
+                  onClick={() => onEdit && onEdit(service)}
+                  className="px-3 py-1.5 rounded-md flex items-center justify-center border border-gray-300 hover:border-green-500 hover:bg-green-50 transition-all duration-200 text-xs font-medium"
+                  disabled={isLoading}
+                >
+                  <FaEdit className="text-green-600 text-xs mr-1" />
+                  Editar
+                </button>
+                <button 
+                  onClick={() => onDelete && onDelete(service)}
+                  className="px-3 py-1.5 rounded-md flex items-center justify-center border border-gray-300 hover:border-red-500 hover:bg-red-50 transition-all duration-200 text-xs font-medium"
+                  disabled={isLoading}
+                >
+                  <FaTrash className="text-red-600 text-xs mr-1" />
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="py-8 text-center text-gray-500 bg-white rounded-lg shadow-sm border border-gray-200">
+            {isLoading ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                <span>Cargando servicios...</span>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="text-lg">📋</div>
+                <div>No se encontraron servicios</div>
+                <div className="text-sm text-gray-400">
+                  Intenta ajustar los filtros o crear un nuevo servicio
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       
       {services && services.length > 0 && (
         <div className="mt-4 text-sm text-gray-500 text-center">

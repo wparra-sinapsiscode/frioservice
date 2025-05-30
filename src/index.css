@@ -40,9 +40,9 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium cursor-pointer 
+    @apply inline-flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-medium cursor-pointer 
            transition-all duration-300 transform hover:scale-105 active:scale-95 
-           focus:outline-none focus:ring-4 focus:ring-opacity-20 text-sm;
+           focus:outline-none focus:ring-4 focus:ring-opacity-20 text-xs sm:text-sm;
   }
   
   .btn-primary {

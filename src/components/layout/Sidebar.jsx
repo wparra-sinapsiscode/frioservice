@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
@@ -16,7 +17,8 @@ import {
   FaSignOutAlt
 } from 'react-icons/fa';
 
-const Sidebar = ({ collapsed }) => {
+const Sidebar = ({ collapsed, onToggle }) => {
+  const isMobile = useMediaQuery({ maxWidth: 768 });
   const { user, logout } = useAuth();
 
   // Determinar el tipo de menú según el rol del usuario
@@ -66,8 +68,23 @@ const Sidebar = ({ collapsed }) => {
 
   const menuItems = getMenuItems();
 
+  // Cerrar sidebar cuando se hace clic en un enlace en móviles
+  const handleLinkClick = () => {
+    if (isMobile && !collapsed) {
+      onToggle();
+    }
+  };
+
   return (
-    <nav className={`fixed top-0 left-0 h-screen bg-white shadow-md z-30 transition-all duration-300 overflow-y-auto ${collapsed ? 'w-[70px]' : 'w-[260px]'}`}>
+    <nav className={`fixed top-0 left-0 h-screen bg-white shadow-md z-30 transition-all duration-300 overflow-y-auto ${collapsed ? '-translate-x-full sm:translate-x-0 sm:w-[70px]' : 'translate-x-0 w-[260px]'}`}>
+      {/* Overlay para cerrar el sidebar en móviles */}
+      {!collapsed && isMobile && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-20" 
+          onClick={onToggle}
+          aria-hidden="true"
+        />
+      )}
       {/* Logo y Header */}
       <div className="flex items-center p-5 bg-gray-900 h-[70px]">
         {/* Ícono blanco, se ve bien */}
@@ -110,6 +127,7 @@ const Sidebar = ({ collapsed }) => {
                  ${isActive ? 'bg-primary text-white font-medium' : ''}`
               }
               end={item.to === '/' || item.to === '/tecnico' || item.to === '/cliente'}
+              onClick={handleLinkClick}
             >
               <span className="text-lg min-w-[22px] text-center">{item.icon}</span>
               {!collapsed && <span className="ml-3">{item.text}</span>}

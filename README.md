@@ -11,21 +11,44 @@ Aplicación de gestión de servicios técnicos de refrigeración, migrada de HTM
 - **Calendario de servicios**: Vista de calendario para programación de servicios
 - **Gestión de técnicos**: Administración de técnicos y asignación de servicios
 - **Perfiles específicos**: Vistas adaptadas para cada tipo de usuario
-- **Diseño responsivo**: Interfaz adaptable a diferentes dispositivos
+- **Diseño responsivo**: Interfaz totalmente adaptable a dispositivos móviles, tablets y escritorio
+
+## Diseño Responsivo
+
+El sistema ha sido optimizado para ofrecer una experiencia de usuario óptima en todos los dispositivos:
+
+### Estructura responsiva:
+- Diseño mobile-first con Tailwind CSS
+- Breakpoints optimizados (sm: 640px, md: 768px, lg: 1024px, xl: 1280px)
+- Sidebar adaptativo que se oculta automáticamente en dispositivos móviles
+- Vista de tarjetas en móviles que reemplaza las tablas tradicionales
+
+### Componentes responsivos clave:
+- `useResponsive`: Hook personalizado para detectar tamaños de pantalla
+- `ResponsiveContainer`: Componente para renderizar contenido condicional según dispositivo
+- Implementación de MediaQuery para adaptación automática del layout
+- Interfaces específicas para cada dispositivo en componentes críticos (tablas/tarjetas)
+
+### Mejoras de usabilidad:
+- Elementos táctiles más grandes en dispositivos móviles
+- Menús adaptados para interacción táctil
+- Diseño de interfaz que prioriza el contenido importante en pantallas pequeñas
 
 ## Tecnologías utilizadas
 
 - React 18
 - React Router para navegación
 - Tailwind CSS para estilos
+- React Responsive para detección de dispositivos
 - Chart.js para gráficos
 - React Icons para iconografía
 - Context API para gestión de estado
+- Vite como bundler
 
 ## Estructura del proyecto
 
 ```
-frioservice-react/
+frioservice/
 ├── public/
 ├── src/
 │   ├── assets/            # Imágenes y recursos estáticos
@@ -40,6 +63,7 @@ frioservice-react/
 │   │   └── ui/            # Componentes UI genéricos
 │   ├── context/           # Contextos para gestión de estado
 │   ├── hooks/             # Custom hooks
+│   │   ├── responsiveHooks/ # Hooks para responsividad
 │   ├── pages/             # Componentes de página
 │   ├── utils/             # Utilidades y datos de ejemplo
 │   ├── App.js             # Componente principal y rutas
@@ -57,7 +81,7 @@ frioservice-react/
    ```
 3. Iniciar el servidor de desarrollo:
    ```
-   npm start
+   npm run dev
    ```
 
 ## Credenciales de prueba
@@ -82,3 +106,4 @@ Esta aplicación es una migración completa de la versión original en HTML/CSS/
 - Gestión de estado centralizada
 - Enrutamiento declarativo
 - Estilos modularizados con Tailwind CSS
+- Diseño responsivo mejorado para todos los dispositivos

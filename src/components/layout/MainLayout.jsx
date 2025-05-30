@@ -2,10 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useMediaQuery } from 'react-responsive';
 
 const MainLayout = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  const [collapsed, setCollapsed] = useState(isMobile);
   const location = useLocation();
+  
+  // Colapsar automáticamente en dispositivos móviles
+  useEffect(() => {
+    setCollapsed(isMobile);
+  }, [isMobile]);
 
   // Actualiza el título de la página basado en la ruta actual
   useEffect(() => {
@@ -55,13 +62,13 @@ const MainLayout = () => {
       <div 
         className={`transition-all duration-300 ${
           collapsed 
-            ? 'ml-[70px]' 
-            : 'ml-[260px]'
+            ? 'ml-0 sm:ml-[70px]' 
+            : 'ml-0 sm:ml-[260px]'
         }`}
       >
         <Header toggleSidebar={toggleSidebar} collapsed={collapsed} />
         
-        <main className="pt-[70px] min-h-screen p-6">
+        <main className="pt-[70px] min-h-screen p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
       </div>
